@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>90's JAR - Homemade Sankranti Snacks</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <button id="mobileMenuToggle" class="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="mobile-logo">
+            <span class="logo-icon">🏺</span>
+            <span>90's JAR</span>
+        </div>
+        <div class="mobile-actions">
+            <button onclick="openNewOrder()" class="btn-mobile-action">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <span class="logo-icon">🏺</span>
+                <div class="logo-text">
+                    <h1>90's JAR</h1>
+                    <span>Homemade Snacks</span>
+                </div>
+            </div>
+        </div>
+        
+        <nav class="sidebar-nav">
+            <a class="nav-item active" data-tab="dashboard">
+                <i class="fas fa-home"></i>
+                <span>Dashboard</span>
+            </a>
+            <a class="nav-item" data-tab="orders">
+                <i class="fas fa-shopping-cart"></i>
+                <span>Orders</span>
+                <span class="nav-badge" id="pendingOrdersBadge">0</span>
+            </a>
+            <a class="nav-item" data-tab="inventory">
+                <i class="fas fa-boxes"></i>
+                <span>Inventory</span>
+            </a>
+            <a class="nav-item" data-tab="combos">
+                <i class="fas fa-gift"></i>
+                <span>Combos</span>
+            </a>
+            <a class="nav-item" data-tab="recipes">
+                <i class="fas fa-book-open"></i>
+                <span>Recipes</span>
+            </a>
+            <a class="nav-item" data-tab="customers">
+                <i class="fas fa-users"></i>
+                <span>Customers</span>
+            </a>
+            <a class="nav-item" data-tab="finance">
+                <i class="fas fa-dollar-sign"></i>
+                <span>Finance</span>
+            </a>
+            <a class="nav-item" data-tab="labels">
+                <i class="fas fa-tag"></i>
+                <span>Labels</span>
+            </a>
+            <a class="nav-item" data-tab="history">
+                <i class="fas fa-history"></i>
+                <span>History</span>
+            </a>
+            <a class="nav-item" data-tab="settings">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <p>📞 +1 6822742570</p>
+            <p>© 2026 90's JAR</p>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="page-header">
+                <h2>Dashboard</h2>
+                <button class="btn btn-primary" onclick="openNewOrder()">
+                    <i class="fas fa-plus"></i> <span class="btn-text">New Order</span>
+                </button>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card orders">
+                    <div class="stat-icon"><i class="fas fa-shopping-bag"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="todayOrders">0</span>
+                        <span class="stat-label">Today's Orders</span>
+                    </div>
+                </div>
+                <div class="stat-card pending">
+                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="pendingOrders">0</span>
+                        <span class="stat-label">Pending</span>
+                    </div>
+                </div>
+                <div class="stat-card revenue">
+                    <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="todayRevenue">$0.00</span>
+                        <span class="stat-label">Today's Revenue</span>
+                    </div>
+                </div>
+                <div class="stat-card stock">
+                    <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="lowStockCount">0</span>
+                        <span class="stat-label">Low Stock</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="dashboard-card">
+                    <h3><i class="fas fa-fire"></i> Popular Items</h3>
+                    <div id="popularItems" class="card-content"></div>
+                </div>
+                <div class="dashboard-card">
+                    <h3><i class="fas fa-truck"></i> Upcoming Deliveries</h3>
+                    <div id="upcomingDeliveries" class="card-content"></div>
+                </div>
+                <div class="dashboard-card">
+                    <h3><i class="fas fa-exclamation-circle"></i> Stock Alerts</h3>
+                    <div id="stockAlerts" class="card-content"></div>
+                </div>
+                <div class="dashboard-card">
+                    <h3><i class="fas fa-user-clock"></i> Recent Customers</h3>
+                    <div id="recentCustomers" class="card-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders Tab -->
+        <div id="orders" class="tab-content">
+            <div class="page-header">
+                <h2>Orders</h2>
+                <button class="btn btn-primary" onclick="openNewOrder()">
+                    <i class="fas fa-plus"></i> <span class="btn-text">New Order</span>
+                </button>
+            </div>
+            <div id="ordersGrid" class="orders-grid"></div>
+        </div>
+
+        <!-- Inventory Tab -->
+        <div id="inventory" class="tab-content">
+            <div class="page-header">
+                <h2>Inventory</h2>
+                <button class="btn btn-primary" onclick="openNewItem()">
+                    <i class="fas fa-plus"></i> <span class="btn-text">Add Item</span>
+                </button>
+            </div>
+            <div id="inventoryGrid" class="inventory-grid"></div>
+        </div>
+
+        <!-- Combos Tab -->
+        <div id="combos" class="tab-content">
+            <div class="page-header">
+                <h2>Combo Offers</h2>
+                <button class="btn btn-primary" onclick="openNewCombo()">
+                    <i class="fas fa-plus"></i> <span class="btn-text">Create Combo</span>
+                </button>
+            </div>
+            <div class="combo-info-banner">
+                <i class="fas fa-info-circle"></i>
+                <span>Special Offer: Any 4 items combo for $22 | Any 2 items combo for $15</span>
+            </div>
+            <div id="combosGrid" class="combos-grid"></div>
+        </div>
+
+        <!-- Recipes Tab -->
+        <div id="recipes" class="tab-content">
+            <div class="page-header">
+                <h2>Recipes</h2>
+                <button class="btn btn-primary" onclick="openNewRecipe()">
+                    <i class="fas fa-plus"></i> <span class="btn-text">Add Recipe</span>
+                </button>
+            </div>
+            <div id="recipesGrid" class="recipes-grid"></div>
+        </div>
+
+        <!-- Customers Tab -->
+        <div id="customers" class="tab-content">
+            <div class="page-header">
+                <h2>Customers</h2>
+                <button class="btn btn-primary" onclick="openNewCustomer()">
+                    <i class="fas fa-plus"></i> <span class="btn-text">Add Customer</span>
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Orders</th>
+                            <th>Total Spent</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customersTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Finance Tab -->
+        <div id="finance" class="tab-content">
+            <div class="page-header">
+                <h2>Finance & Budget</h2>
+                <button class="btn btn-primary" onclick="openNewTransaction()">
+                    <i class="fas fa-plus"></i> <span class="btn-text">Add Transaction</span>
+                </button>
+            </div>
+
+            <div class="finance-summary">
+                <div class="finance-card income">
+                    <i class="fas fa-arrow-down"></i>
+                    <div class="finance-info">
+                        <span class="finance-label">Total Income</span>
+                        <span class="finance-value" id="totalIncome">$0.00</span>
+                    </div>
+                </div>
+                <div class="finance-card expense">
+                    <i class="fas fa-arrow-up"></i>
+                    <div class="finance-info">
+                        <span class="finance-label">Total Expenses</span>
+                        <span class="finance-value" id="totalExpenses">$0.00</span>
+                    </div>
+                </div>
+                <div class="finance-card profit">
+                    <i class="fas fa-chart-line"></i>
+                    <div class="finance-info">
+                        <span class="finance-label">Net Profit</span>
+                        <span class="finance-value" id="netProfit">$0.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Labels Tab -->
+        <div id="labels" class="tab-content">
+            <div class="page-header">
+                <h2>Label Generator</h2>
+            </div>
+            <div class="labels-container">
+                <div class="label-form">
+                    <h3>Generate Label</h3>
+                    <div class="form-group">
+                        <label>Select Item</label>
+                        <select id="labelItem" class="form-control"></select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Quantity/Weight</label>
+                            <input type="text" id="labelQuantity" class="form-control" placeholder="e.g., 250g">
+                        </div>
+                        <div class="form-group">
+                            <label>Custom Price ($)</label>
+                            <input type="number" id="labelPrice" class="form-control" step="0.01" placeholder="Optional">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Expiry Date</label>
+                        <input type="date" id="labelExpiry" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Offer Text</label>
+                        <input type="text" id="labelOffer" class="form-control" placeholder="e.g., 10% OFF">
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn btn-primary" onclick="Labels.generateLabel()">
+                            <i class="fas fa-magic"></i> Generate
+                        </button>
+                        <button class="btn btn-secondary" onclick="Labels.printLabel()">
+                            <i class="fas fa-print"></i> Print
+                        </button>
+                    </div>
+                </div>
+                <div class="label-preview-container">
+                    <h3>Preview</h3>
+                    <div id="labelOutput" class="label-output">
+                        <div class="empty-state">
+                            <i class="fas fa-tag"></i>
+                            <p>Generate a label to preview</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Tab -->
+        <div id="history" class="tab-content">
+            <div class="page-header">
+                <h2>Order History</h2>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Delivered</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings" class="tab-content">
+            <div class="page-header">
+                <h2>Settings</h2>
+            </div>
+            <div class="settings-container">
+                <div class="settings-section">
+                    <h3><i class="fas fa-store"></i> Business Information</h3>
+                    <div class="form-group">
+                        <label>Business Name</label>
+                        <input type="text" id="businessName" class="form-control" value="90's JAR - Homemade Sankranti Snacks">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Phone</label>
+                            <input type="tel" id="businessPhone" class="form-control" value="+1 6822742570">
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="businessEmail" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Address</label>
+                        <textarea id="businessAddress" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3><i class="fas fa-sliders-h"></i> Preferences</h3>
+                    <div class="form-group">
+                        <label>Low Stock Threshold</label>
+                        <input type="number" id="lowStockThreshold" class="form-control" value="5" min="1">
+                    </div>
+                    <div class="form-group toggle-group">
+                        <label>Dark Mode</label>
+                        <label class="toggle">
+                            <input type="checkbox" id="darkModeToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3><i class="fas fa-database"></i> Data Management</h3>
+                    <div class="btn-group">
+                        <button class="btn btn-secondary" onclick="Settings.exportData()">
+                            <i class="fas fa-download"></i> Export Data
+                        </button>
+                        <button class="btn btn-secondary" onclick="Settings.importData()">
+                            <i class="fas fa-upload"></i> Import Data
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn btn-primary" onclick="Settings.saveSettings()">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Order Modal -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3><i class="fas fa-shopping-cart"></i> New Order</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="order-form-grid">
+                    <div class="order-customer-section">
+                        <h4>Customer Details</h4>
+                        <div class="form-group">
+                            <label>Customer Name *</label>
+                            <input type="text" id="orderCustomerName" class="form-control" placeholder="Enter customer name" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Phone</label>
+                                <input type="tel" id="orderCustomerPhone" class="form-control" placeholder="Phone number">
+                            </div>
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" id="orderCustomerEmail" class="form-control" placeholder="Email">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Address</label>
+                            <textarea id="orderCustomerAddress" class="form-control" rows="2" placeholder="Delivery address"></textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Deadline</label>
+                                <input type="date" id="orderDeadline" class="form-control">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Notes</label>
+                            <textarea id="orderNotes" class="form-control" rows="2" placeholder="Special instructions"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="order-items-section">
+                        <h4>Add Items</h4>
+                        
+                        <!-- From Inventory -->
+                        <div class="add-item-box">
+                            <label>From Inventory</label>
+                            <div class="add-item-row">
+                                <select id="orderItemSelect" class="form-control"></select>
+                                <input type="number" id="orderItemQty" class="form-control qty-input" value="1" min="1">
+                                <button class="btn btn-sm" onclick="Orders.addItemToOrder()"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Manual Entry -->
+                        <div class="add-item-box manual-entry">
+                            <label>Add Manually</label>
+                            <div class="manual-item-inputs">
+                                <input type="text" id="manualItemName" class="form-control" placeholder="Item name">
+                                <input type="number" id="manualItemPrice" class="form-control" placeholder="Price $" step="0.01">
+                                <input type="number" id="manualItemQty" class="form-control qty-input" value="1" min="1">
+                                <button class="btn btn-sm" onclick="Orders.addManualItem()"><i class="fas fa-plus"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Combos -->
+                        <div class="add-item-box">
+                            <label>Add Combo</label>
+                            <div class="add-item-row">
+                                <select id="orderComboSelect" class="form-control">
+                                    <option value="">Select Combo...</option>
+                                    <option value="4-combo">Any 4 Items - $22</option>
+                                    <option value="2-combo">Any 2 Items - $15</option>
+                                </select>
+                                <button class="btn btn-sm" onclick="Orders.addComboToOrder()"><i class="fas fa-gift"></i> Add</button>
+                            </div>
+                        </div>
+
+                        <h4>Order Items</h4>
+                        <div id="orderItems" class="order-items-list">
+                            <div class="empty-cart">
+                                <i class="fas fa-shopping-basket"></i>
+                                <p>No items added yet</p>
+                            </div>
+                        </div>
+
+                        <div class="order-totals">
+                            <div class="total-row">
+                                <span>Subtotal:</span>
+                                <span id="orderSubtotal">$0.00</span>
+                            </div>
+                            <div class="total-row discount-row">
+                                <span>Discount:</span>
+                                <div class="discount-input-group">
+                                    <span>$</span>
+                                    <input type="number" id="orderDiscountInput" class="form-control" value="0" min="0" step="0.01" onchange="Orders.updateOrderSummary()">
+                                </div>
+                                <span id="orderDiscount">$0.00</span>
+                            </div>
+                            <div class="total-row grand-total">
+                                <span>Total:</span>
+                                <span id="orderTotal">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Cancel</button>
+                <button class="btn btn-primary" onclick="Orders.saveOrder()">
+                    <i class="fas fa-check"></i> Create Order
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Order Modal -->
+    <div id="viewOrderModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-receipt"></i> Order Details</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="order-detail">
+                    <p><strong>Order ID:</strong> <span id="viewOrderId"></span></p>
+                    <p><strong>Customer:</strong> <span id="viewOrderCustomer"></span></p>
+                    <p><strong>Phone:</strong> <span id="viewOrderPhone"></span></p>
+                </div>
+                <h4>Items</h4>
+                <div id="viewOrderItems" class="view-items-list"></div>
+                <div class="view-total">
+                    <strong>Total: <span id="viewOrderTotal"></span></strong>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inventory Modal -->
+    <div id="inventoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-box"></i> Add/Edit Item</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="itemId">
+                <div class="form-group">
+                    <label>Item Name *</label>
+                    <input type="text" id="itemName" class="form-control" placeholder="e.g., Chakkalu" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="itemCategory" class="form-control">
+                            <option value="snacks">🍪 Snacks</option>
+                            <option value="pickles">🥒 Pickles</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Unit</label>
+                        <select id="itemUnit" class="form-control">
+                            <option value="packet">Packet</option>
+                            <option value="jar">Jar</option>
+                            <option value="box">Box</option>
+                            <option value="piece">Piece</option>
+                            <option value="kg">Kg</option>
+                            <option value="lb">Lb</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Cost Price ($)</label>
+                        <input type="number" id="itemCostPrice" class="form-control" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Selling Price ($)</label>
+                        <input type="number" id="itemSellingPrice" class="form-control" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Stock</label>
+                        <input type="number" id="itemStock" class="form-control" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Shelf Life (days)</label>
+                        <input type="number" id="itemShelfLife" class="form-control" placeholder="30">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="itemDescription" class="form-control" rows="2" placeholder="Item description"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Cancel</button>
+                <button class="btn btn-primary" onclick="Inventory.saveItem()">
+                    <i class="fas fa-save"></i> Save Item
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Combo Modal -->
+    <div id="comboModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-gift"></i> Create Combo</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="comboId">
+                <div class="form-group">
+                    <label>Combo Name *</label>
+                    <input type="text" id="comboName" class="form-control" placeholder="e.g., Sankranti Special 4-Pack">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="comboDescription" class="form-control" rows="2" placeholder="Combo description"></textarea>
+                </div>
+                
+                <h4>Add Items to Combo</h4>
+                <div class="add-item-row">
+                    <select id="comboItemSelect" class="form-control"></select>
+                    <input type="number" id="comboItemQty" class="form-control qty-input" value="1" min="1">
+                    <button class="btn btn-sm" onclick="Combos.addItemToCombo()"><i class="fas fa-plus"></i></button>
+                </div>
+
+                <div id="comboItemsList" class="combo-items-list">
+                    <p class="empty-text">No items added</p>
+                </div>
+
+                <div class="combo-pricing-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Regular Total</label>
+                            <span id="comboRegularTotal" class="price-display">$0.00</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Combo Price ($) *</label>
+                            <input type="number" id="comboPrice" class="form-control" step="0.01" placeholder="e.g., 22.00">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Cancel</button>
+                <button class="btn btn-primary" onclick="Combos.saveCombo()">
+                    <i class="fas fa-save"></i> Save Combo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recipe Modal -->
+    <div id="recipeModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3><i class="fas fa-book-open"></i> Add/Edit Recipe</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="recipeId">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Recipe Name *</label>
+                        <input type="text" id="recipeName" class="form-control" placeholder="e.g., Chakkalu Recipe">
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="recipeCategory" class="form-control">
+                            <option value="snacks">🍪 Snacks</option>
+                            <option value="pickles">🥒 Pickles</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Batch Size</label>
+                        <input type="text" id="recipeBatchSize" class="form-control" placeholder="e.g., 2 kg">
+                    </div>
+                    <div class="form-group">
+                        <label>Total Time</label>
+                        <input type="text" id="recipeTotalTime" class="form-control" placeholder="e.g., 2 hours">
+                    </div>
+                </div>
+
+                <h4>Ingredients</h4>
+                <div class="ingredient-input-row">
+                    <input type="text" id="ingredientName" class="form-control" placeholder="Ingredient">
+                    <input type="text" id="ingredientQty" class="form-control" placeholder="Quantity">
+                    <input type="number" id="ingredientCost" class="form-control" placeholder="Cost $" step="0.01">
+                    <button class="btn btn-sm" onclick="Recipes.addIngredient()"><i class="fas fa-plus"></i></button>
+                </div>
+                <div id="ingredientsList" class="ingredients-list">
+                    <p class="empty-text">No ingredients added</p>
+                </div>
+                <div class="total-cost-display">
+                    <span>Total Ingredient Cost:</span>
+                    <strong id="totalIngredientCost">$0.00</strong>
+                </div>
+
+                <h4>Steps</h4>
+                <div class="step-input-row">
+                    <textarea id="recipeStep" class="form-control" rows="2" placeholder="Enter preparation step"></textarea>
+                    <button class="btn btn-sm" onclick="Recipes.addStep()"><i class="fas fa-plus"></i></button>
+                </div>
+                <div id="stepsList" class="steps-list">
+                    <p class="empty-text">No steps added</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="recipeNotes" class="form-control" rows="2" placeholder="Additional notes"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Cancel</button>
+                <button class="btn btn-primary" onclick="Recipes.saveRecipe()">
+                    <i class="fas fa-save"></i> Save Recipe
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Recipe Modal -->
+    <div id="viewRecipeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-book-open"></i> <span id="viewRecipeName"></span></h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="recipe-meta-view">
+                    <span><i class="fas fa-tag"></i> <span id="viewRecipeCategory"></span></span>
+                    <span><i class="fas fa-balance-scale"></i> <span id="viewRecipeBatchSize"></span></span>
+                    <span><i class="fas fa-clock"></i> <span id="viewRecipeTime"></span></span>
+                </div>
+                <h4>Ingredients</h4>
+                <ul id="viewRecipeIngredients" class="view-list"></ul>
+                <p class="total-cost-view">Total Cost: <strong id="viewRecipeTotalCost"></strong></p>
+                <h4>Steps</h4>
+                <ol id="viewRecipeSteps" class="view-list"></ol>
+                <h4>Notes</h4>
+                <p id="viewRecipeNotes" class="recipe-notes"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Customer Modal -->
+    <div id="customerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-user"></i> Add/Edit Customer</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="customerId">
+                <div class="form-group">
+                    <label>Customer Name *</label>
+                    <input type="text" id="customerName" class="form-control" placeholder="Full name">
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="tel" id="customerPhone" class="form-control" placeholder="Phone number">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="customerEmail" class="form-control" placeholder="Email address">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <textarea id="customerAddress" class="form-control" rows="2" placeholder="Full address"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="customerNotes" class="form-control" rows="2" placeholder="Customer notes"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Cancel</button>
+                <button class="btn btn-primary" onclick="Customers.saveCustomer()">
+                    <i class="fas fa-save"></i> Save Customer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Modal -->
+    <div id="transactionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-dollar-sign"></i> Add Transaction</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select id="transType" class="form-control">
+                            <option value="expense">Expense</option>
+                            <option value="income">Income</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="transCategory" class="form-control">
+                            <option value="ingredients">Ingredients</option>
+                            <option value="packaging">Packaging</option>
+                            <option value="utilities">Utilities</option>
+                            <option value="equipment">Equipment</option>
+                            <option value="marketing">Marketing</option>
+                            <option value="delivery">Delivery</option>
+                            <option value="sales">Sales</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Amount ($) *</label>
+                        <input type="number" id="transAmount" class="form-control" step="0.01" placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="transDate" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="transDescription" class="form-control" rows="2" placeholder="Transaction description"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary modal-cancel">Cancel</button>
+                <button class="btn btn-primary" onclick="Finance.addTransaction()">
+                    <i class="fas fa-plus"></i> Add Transaction
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="api.js"></script>
+    <script src="modules.js"></script>
+    <script src="orders.js"></script>
+    <script src="inventory.js"></script>
+    <script src="recipes.js"></script>
+    <script src="customers.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
