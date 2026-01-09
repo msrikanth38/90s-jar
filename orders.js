@@ -506,7 +506,147 @@ const Orders = {
             await DataStore.loadAll();
             this.refresh();
             Dashboard.refresh();
+            
+            // Show/hide payment row when status is delivered
+            this.updatePaymentVisibility(newStatus);
         }
+    },
+
+    updatePaymentVisibility(status) {
+        const paymentRow = document.getElementById('paymentRow');
+        const completeBtn = document.getElementById('completeOrderBtn');
+        
+        if (status === 'delivered') {
+            paymentRow.style.display = 'flex';
+        } else {
+            paymentRow.style.display = 'none';
+            completeBtn.style.display = 'none';
+            document.getElementById('paymentReceived').checked = false;
+        }
+    },
+
+    togglePaymentReceived() {
+        const isChecked = document.getElementById('paymentReceived').checked;
+        const completeBtn = document.getElementById('completeOrderBtn');
+        
+        if (isChecked) {
+            completeBtn.style.display = 'inline-flex';
+        } else {
+            completeBtn.style.display = 'none';
+        }
+    },
+
+    async completeOrder() {
+        if (!this.viewingOrderId) return;
+        
+        const order = DataStore.orders.find(o => o.id === this.viewingOrderId);
+        if (!order) return;
+        
+        if (!confirm('Complete this order? It will be moved to History and Today\'s Income will be updated.')) {
+            return;
+        }
+        
+        // Update status to completed and move to history
+        const result = await API.updateOrderStatus(this.viewingOrderId, 'completed');
+        
+        if (result.success) {
+            Toast.success('Order Completed', `Order moved to history. Income: ${Utils.formatCurrency(order.total)}`);
+            Modal.close('viewOrderModal');
+            await DataStore.loadAll();
+            this.refresh();
+            Dashboard.refresh();
+            History.refresh();
+        }
+    },
+
+    printReceipt() {
+        if (!this.viewingOrderId) return;
+        
+        const order = DataStore.orders.find(o => o.id === this.viewingOrderId);
+        if (!order) return;
+        
+        const receiptHtml = this.createReceiptHtml(order);
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(receiptHtml);
+        printWindow.document.close();
+        printWindow.onload = () => {
+            printWindow.print();
+        };
+    },
+
+    createReceiptHtml(order) {
+        const itemsHtml = (order.items || []).map(item => `
+            <tr>
+                <td style="padding: 5px; border-bottom: 1px dashed #ddd;">${item.isCombo ? '📦 ' : ''}${item.name}</td>
+                <td style="padding: 5px; border-bottom: 1px dashed #ddd; text-align: center;">${item.quantity}</td>
+                <td style="padding: 5px; border-bottom: 1px dashed #ddd; text-align: right;">$${item.price.toFixed(2)}</td>
+                <td style="padding: 5px; border-bottom: 1px dashed #ddd; text-align: right;">$${item.total.toFixed(2)}</td>
+            </tr>
+        `).join('');
+        
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Receipt - ${order.order_id || order.orderId}</title>
+                <style>
+                    body { font-family: 'Courier New', monospace; padding: 20px; max-width: 350px; margin: 0 auto; }
+                    .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px; }
+                    .header h1 { margin: 0; font-size: 18px; }
+                    .header p { margin: 5px 0; font-size: 12px; }
+                    .order-info { margin-bottom: 15px; font-size: 12px; }
+                    .order-info p { margin: 3px 0; }
+                    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                    th { text-align: left; border-bottom: 1px solid #000; padding: 5px; }
+                    .totals { margin-top: 15px; border-top: 2px solid #000; padding-top: 10px; }
+                    .totals p { margin: 5px 0; font-size: 12px; display: flex; justify-content: space-between; }
+                    .grand-total { font-size: 16px !important; font-weight: bold; border-top: 1px solid #000; padding-top: 5px; margin-top: 5px; }
+                    .footer { text-align: center; margin-top: 20px; font-size: 11px; border-top: 1px dashed #000; padding-top: 10px; }
+                    @media print { body { padding: 0; } }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>🏺 90's JAR</h1>
+                    <p>Homemade Sankranti Snacks & Pickles</p>
+                    <p>📞 +1 6822742570</p>
+                </div>
+                
+                <div class="order-info">
+                    <p><strong>Order:</strong> ${order.order_id || order.orderId}</p>
+                    <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+                    <p><strong>Customer:</strong> ${order.customer_name || order.customerName}</p>
+                    <p><strong>Phone:</strong> ${order.customer_phone || order.customerPhone || 'N/A'}</p>
+                    ${order.customer_address || order.customerAddress ? `<p><strong>Address:</strong> ${order.customer_address || order.customerAddress}</p>` : ''}
+                </div>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th style="text-align: center;">Qty</th>
+                            <th style="text-align: right;">Price</th>
+                            <th style="text-align: right;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${itemsHtml}
+                    </tbody>
+                </table>
+                
+                <div class="totals">
+                    <p><span>Subtotal:</span> <span>$${(order.subtotal || order.total).toFixed(2)}</span></p>
+                    ${order.discount ? `<p><span>Discount:</span> <span>-$${order.discount.toFixed(2)}</span></p>` : ''}
+                    <p class="grand-total"><span>TOTAL:</span> <span>$${order.total.toFixed(2)}</span></p>
+                </div>
+                
+                <div class="footer">
+                    <p>Thank you for your order!</p>
+                    <p>🙏 Visit us again!</p>
+                </div>
+            </body>
+            </html>
+        `;
     },
 
     viewOrder(orderId) {
@@ -524,8 +664,15 @@ const Orders = {
         document.getElementById('viewOrderEmail').textContent = order.customer_email || order.customerEmail || 'N/A';
         document.getElementById('viewOrderAddress').textContent = order.customer_address || order.customerAddress || 'N/A';
         document.getElementById('viewOrderDeadline').textContent = order.deadline ? Utils.formatDate(order.deadline) : 'N/A';
-        document.getElementById('viewOrderNotes').textContent = order.notes || 'N/A';
+        document.getElementById('viewOrderNotes').textContent = order.notes || 'None';
         document.getElementById('viewOrderStatus').value = order.status || 'pending';
+        
+        // Reset payment checkbox
+        document.getElementById('paymentReceived').checked = false;
+        document.getElementById('completeOrderBtn').style.display = 'none';
+        
+        // Show payment row if delivered
+        this.updatePaymentVisibility(order.status);
         
         document.getElementById('viewOrderItems').innerHTML = (order.items || []).map(item => {
             let comboLine = '';

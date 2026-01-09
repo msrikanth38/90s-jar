@@ -766,26 +766,42 @@
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="order-detail">
-                    <p><strong>Order ID:</strong> <span id="viewOrderId"></span></p>
-                    <p><strong>Customer:</strong> <span id="viewOrderCustomer"></span></p>
-                    <p><strong>Phone:</strong> <span id="viewOrderPhone"></span></p>
-                    <p><strong>Email:</strong> <span id="viewOrderEmail">N/A</span></p>
-                    <p><strong>Address:</strong> <span id="viewOrderAddress">N/A</span></p>
-                    <p><strong>Deadline:</strong> <span id="viewOrderDeadline">N/A</span></p>
-                    <p><strong>Notes:</strong> <span id="viewOrderNotes">N/A</span></p>
+                <div class="order-detail-grid">
+                    <div class="order-detail-section">
+                        <h4><i class="fas fa-user"></i> Customer</h4>
+                        <p><strong>Name:</strong> <span id="viewOrderCustomer"></span></p>
+                        <p><strong>Phone:</strong> <span id="viewOrderPhone"></span></p>
+                        <p><strong>Email:</strong> <span id="viewOrderEmail">N/A</span></p>
+                        <p><strong>Address:</strong> <span id="viewOrderAddress">N/A</span></p>
+                    </div>
+                    <div class="order-detail-section">
+                        <h4><i class="fas fa-info-circle"></i> Order Info</h4>
+                        <p><strong>Order ID:</strong> <span id="viewOrderId"></span></p>
+                        <p><strong>Deadline:</strong> <span id="viewOrderDeadline">N/A</span></p>
+                        <p><strong>Notes:</strong> <span id="viewOrderNotes">N/A</span></p>
+                    </div>
                 </div>
+                
                 <div class="order-status-section">
-                    <label><strong>Status:</strong></label>
-                    <select id="viewOrderStatus" class="form-control status-select" onchange="Orders.changeStatus()">
-                        <option value="pending">⏳ Pending</option>
-                        <option value="processing">🔄 Processing</option>
-                        <option value="ready">✅ Ready</option>
-                        <option value="delivered">🚚 Delivered</option>
-                        <option value="completed">✔️ Completed</option>
-                        <option value="cancelled">❌ Cancelled</option>
-                    </select>
+                    <div class="status-row">
+                        <label><strong>Status:</strong></label>
+                        <select id="viewOrderStatus" class="form-control status-select" onchange="Orders.changeStatus()">
+                            <option value="pending">⏳ Pending</option>
+                            <option value="processing">🔄 Processing</option>
+                            <option value="ready">✅ Ready</option>
+                            <option value="delivered">🚚 Delivered</option>
+                            <option value="cancelled">❌ Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="payment-row" id="paymentRow" style="display: none;">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="paymentReceived" onchange="Orders.togglePaymentReceived()">
+                            <span class="checkmark"></span>
+                            <strong>💵 Payment Received</strong>
+                        </label>
+                    </div>
                 </div>
+                
                 <h4>Items</h4>
                 <div id="viewOrderItems" class="view-items-list"></div>
                 <div class="view-total">
@@ -794,11 +810,14 @@
             </div>
             <div class="modal-footer view-order-footer">
                 <button class="btn btn-secondary modal-cancel">Close</button>
-                <button class="btn btn-info" onclick="Orders.generateLabelsFromOrder()">
-                    <i class="fas fa-tag"></i> Print Labels
+                <button class="btn btn-primary" id="completeOrderBtn" onclick="Orders.completeOrder()" style="display: none;">
+                    <i class="fas fa-check-circle"></i> Complete & Move to History
+                </button>
+                <button class="btn btn-info" onclick="Orders.printReceipt()">
+                    <i class="fas fa-receipt"></i> Print Receipt
                 </button>
                 <button class="btn btn-warning" onclick="Orders.editOrder()">
-                    <i class="fas fa-edit"></i> Edit Order
+                    <i class="fas fa-edit"></i> Edit
                 </button>
             </div>
         </div>

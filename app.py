@@ -694,8 +694,8 @@ def update_order_status(order_id):
     conn, is_postgres = get_db()
     cur = conn.cursor()
     
-    if new_status == 'delivered':
-        # Get order details
+    if new_status == 'completed':
+        # Move order to history when completed (delivered + payment received)
         if is_postgres:
             cur.execute('SELECT * FROM orders WHERE id = %s', (order_id,))
         else:
@@ -710,15 +710,16 @@ def update_order_status(order_id):
                 cur.execute('''
                     INSERT INTO order_history (id, order_id, customer_name, customer_phone, customer_email, customer_address, items, subtotal, discount, total, deadline, notes, status, created_at, delivered_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ''', (order['id'], order['order_id'], order['customer_name'], order['customer_phone'], order['customer_email'], order['customer_address'], order['items'], order['subtotal'], order['discount'], order['total'], order['deadline'], order['notes'], 'delivered', order['created_at'], now))
+                ''', (order['id'], order['order_id'], order['customer_name'], order['customer_phone'], order['customer_email'], order['customer_address'], order['items'], order['subtotal'], order['discount'], order['total'], order['deadline'], order['notes'], 'completed', order['created_at'], now))
                 cur.execute('DELETE FROM orders WHERE id = %s', (order_id,))
             else:
                 cur.execute('''
                     INSERT INTO order_history (id, order_id, customer_name, customer_phone, customer_email, customer_address, items, subtotal, discount, total, deadline, notes, status, created_at, delivered_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (order['id'], order['order_id'], order['customer_name'], order['customer_phone'], order['customer_email'], order['customer_address'], order['items'], order['subtotal'], order['discount'], order['total'], order['deadline'], order['notes'], 'delivered', order['created_at'], now))
+                ''', (order['id'], order['order_id'], order['customer_name'], order['customer_phone'], order['customer_email'], order['customer_address'], order['items'], order['subtotal'], order['discount'], order['total'], order['deadline'], order['notes'], 'completed', order['created_at'], now))
                 cur.execute('DELETE FROM orders WHERE id = ?', (order_id,))
     else:
+        # Just update status (pending, processing, shipped, delivered)
         if is_postgres:
             cur.execute('UPDATE orders SET status = %s WHERE id = %s', (new_status, order_id))
         else:
@@ -1103,6 +1104,10 @@ def get_stats():
         cur.execute('SELECT COALESCE(SUM(total), 0) as sum FROM orders WHERE created_at LIKE %s', (f'{today}%',))
         today_revenue = cur.fetchone()['sum']
         
+        # Today's Income = Completed orders delivered today (payment received)
+        cur.execute('SELECT COALESCE(SUM(total), 0) as sum FROM order_history WHERE delivered_at LIKE %s', (f'{today}%',))
+        today_income = cur.fetchone()['sum']
+        
         cur.execute('SELECT COUNT(*) as count FROM inventory WHERE stock <= 5')
         low_stock = cur.fetchone()['count']
         
@@ -1127,6 +1132,10 @@ def get_stats():
         cur.execute('SELECT COALESCE(SUM(total), 0) FROM orders WHERE created_at LIKE ?', (f'{today}%',))
         today_revenue = cur.fetchone()[0]
         
+        # Today's Income = Completed orders delivered today (payment received)
+        cur.execute('SELECT COALESCE(SUM(total), 0) FROM order_history WHERE delivered_at LIKE ?', (f'{today}%',))
+        today_income = cur.fetchone()[0]
+        
         cur.execute('SELECT COUNT(*) FROM inventory WHERE stock <= 5')
         low_stock = cur.fetchone()[0]
         
@@ -1148,6 +1157,7 @@ def get_stats():
         'todayOrders': today_orders,
         'pendingOrders': pending_orders,
         'todayRevenue': today_revenue,
+        'todayIncome': today_income,
         'lowStockCount': low_stock,
         'totalCustomers': total_customers,
         'totalRevenue': orders_revenue + history_revenue,
