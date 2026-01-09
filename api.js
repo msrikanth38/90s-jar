@@ -125,6 +125,7 @@ const DataStore = {
     transactions: [],
     offers: [],
     orderHistory: [],
+    grocery: [],
     notifications: [],
     settings: {
         businessName: "90's JAR - Homemade Sankranti Snacks",
@@ -138,7 +139,7 @@ const DataStore = {
     async loadAll() {
         try {
             [this.inventory, this.orders, this.combos, this.recipes, 
-             this.customers, this.transactions, this.offers, this.orderHistory] = await Promise.all([
+             this.customers, this.transactions, this.offers, this.orderHistory, this.grocery] = await Promise.all([
                 API.getInventory(),
                 API.getOrders(),
                 API.getCombos(),
@@ -146,7 +147,8 @@ const DataStore = {
                 API.getCustomers(),
                 API.getTransactions(),
                 API.getOffers(),
-                API.getHistory()
+                API.getHistory(),
+                API.getGrocery()
             ]);
             
             // Load settings from localStorage (client-side preference)
@@ -182,6 +184,7 @@ const DataStore = {
                 transactions: this.transactions,
                 offers: this.offers,
                 orderHistory: this.orderHistory,
+                grocery: this.grocery,
                 timestamp: new Date().toISOString()
             };
             localStorage.setItem('data_backup', JSON.stringify(backup));
@@ -204,6 +207,7 @@ const DataStore = {
                 this.transactions = data.transactions || [];
                 this.offers = data.offers || [];
                 this.orderHistory = data.orderHistory || [];
+                this.grocery = data.grocery || [];
                 console.log('Data restored from localStorage backup from', data.timestamp);
                 Toast.warning('Offline Mode', 'Using cached data. Server may be unavailable.');
             }

@@ -86,42 +86,69 @@ const Dashboard = {
     updateStats() {
         const today = new Date().toDateString();
         
-        // Count today's orders from both active orders and history
-        const todayOrders = DataStore.orders.filter(o => 
-            new Date(o.created_at || o.createdAt).toDateString() === today
-        );
+        // Today's Orders = Orders created today (both active and completed)
+        const todayActiveOrders = DataStore.orders.filter(o => {
+            const createdDate = o.created_at || o.createdAt;
+            return createdDate && new Date(createdDate).toDateString() === today;
+        });
         
-        const todayCompleted = DataStore.orderHistory.filter(o => {
+        const todayCompletedOrders = DataStore.orderHistory.filter(o => {
+            const createdDate = o.created_at || o.createdAt;
+            return createdDate && new Date(createdDate).toDateString() === today;
+        });
+        
+        const totalTodayOrders = todayActiveOrders.length + todayCompletedOrders.length;
+        document.getElementById('todayOrders').textContent = totalTodayOrders;
+
+        // Pending = All orders not yet delivered (from active orders)
+        const pendingOrders = DataStore.orders.filter(o => 
+            o.status !== 'delivered' && o.status !== 'completed'
+        );
+        document.getElementById('pendingOrders').textContent = pendingOrders.length;
+        const pendingBadge = document.getElementById('pendingOrdersBadge');
+        if (pendingBadge) pendingBadge.textContent = pendingOrders.length;
+
+        // Today's Income = Completed orders delivered TODAY (from history)
+        const todayDelivered = DataStore.orderHistory.filter(o => {
             const deliveredDate = o.delivered_at || o.deliveredAt;
             return deliveredDate && new Date(deliveredDate).toDateString() === today;
         });
-        
-        document.getElementById('todayOrders').textContent = todayOrders.length + todayCompleted.length;
-
-        const pendingOrders = DataStore.orders.filter(o => o.status !== 'delivered');
-        document.getElementById('pendingOrders').textContent = pendingOrders.length;
-        document.getElementById('pendingOrdersBadge').textContent = pendingOrders.length;
-
-        // Today's Income = Completed orders delivered today (payment received)
-        const todayIncome = todayCompleted.reduce((sum, o) => sum + (o.total || 0), 0);
+        const todayIncome = todayDelivered.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
         document.getElementById('todayRevenue').textContent = Utils.formatCurrency(todayIncome);
 
-        // Today's expenses from transactions
+        // Today's Expenses = Expenses from Finance/Transactions tab for today
         const todayExpenses = DataStore.transactions
-            .filter(t => t.type === 'expense' && new Date(t.date).toDateString() === today)
-            .reduce((sum, t) => sum + (t.amount || 0), 0);
+            .filter(t => {
+                const isExpense = t.type === 'expense';
+                const transDate = t.date || t.created_at || t.createdAt;
+                const isToday = transDate && new Date(transDate).toDateString() === today;
+                return isExpense && isToday;
+            })
+            .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
         document.getElementById('todayExpenses').textContent = Utils.formatCurrency(todayExpenses);
 
-        // Today's profit = Income - Expenses
+        // Today's Profit = Income - Expenses
         const todayProfit = todayIncome - todayExpenses;
         const profitEl = document.getElementById('todayProfit');
         profitEl.textContent = Utils.formatCurrency(todayProfit);
         profitEl.className = `stat-value ${todayProfit >= 0 ? 'profit-positive' : 'profit-negative'}`;
 
-        const lowStock = DataStore.inventory.filter(i => 
-            i.stock <= DataStore.settings.lowStockThreshold
+        // Low Stock = Inventory items + Grocery items below threshold
+        const lowStockThreshold = DataStore.settings.lowStockThreshold || 5;
+        const lowStockInventory = DataStore.inventory.filter(i => 
+            (parseFloat(i.stock) || 0) <= lowStockThreshold
         );
-        document.getElementById('lowStockCount').textContent = lowStock.length;
+        
+        // Also check grocery items if available
+        let lowStockGrocery = [];
+        if (DataStore.grocery && DataStore.grocery.length > 0) {
+            lowStockGrocery = DataStore.grocery.filter(g => 
+                (parseFloat(g.quantity) || 0) <= lowStockThreshold
+            );
+        }
+        
+        const totalLowStock = lowStockInventory.length + lowStockGrocery.length;
+        document.getElementById('lowStockCount').textContent = totalLowStock;
     },
 
     renderPopularItems() {

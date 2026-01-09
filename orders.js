@@ -57,12 +57,21 @@ const Orders = {
             const statusIcons = {
                 'pending': 'clock',
                 'processing': 'spinner',
-                'ready': 'check',
+                'ready': 'box',
                 'delivered': 'truck',
                 'completed': 'check-circle',
                 'cancelled': 'times-circle'
             };
+            const statusLabels = {
+                'pending': 'Pending',
+                'processing': 'Processing',
+                'ready': 'Ready for Delivery',
+                'delivered': 'Delivered',
+                'completed': 'Completed',
+                'cancelled': 'Cancelled'
+            };
             const statusIcon = statusIcons[order.status] || 'clock';
+            const statusLabel = statusLabels[order.status] || order.status;
             
             // Build item tags with combo details
             const itemTags = (order.items || []).slice(0, 3).map(item => {
@@ -76,7 +85,7 @@ const Orders = {
                 <div class="order-card ${statusClass}" data-id="${order.id}">
                     <div class="order-header">
                         <span class="order-id">${order.order_id || order.orderId}</span>
-                        <span class="order-status ${statusClass}"><i class="fas fa-${statusIcon}"></i> ${order.status}</span>
+                        <span class="order-status ${statusClass}"><i class="fas fa-${statusIcon}"></i> ${statusLabel}</span>
                     </div>
                     <div class="order-customer">
                         <div class="customer-avatar">${Utils.getInitials(order.customer_name || order.customerName)}</div>

@@ -324,8 +324,8 @@ body {
 
 /* ===== Stats Grid ===== */
 .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
     gap: 10px;
     margin-bottom: 20px;
 }
@@ -339,6 +339,8 @@ body {
     gap: 10px;
     box-shadow: var(--shadow-sm);
     transition: transform 0.2s, box-shadow 0.2s;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .stat-card:hover {
