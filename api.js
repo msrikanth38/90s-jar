@@ -5,6 +5,15 @@ const API = {
     async get(endpoint) {
         try {
             const response = await fetch(`${this.baseUrl}/api/${endpoint}`);
+            if (!response.ok) {
+                console.error(`GET ${endpoint} failed with status: ${response.status}`);
+                return [];
+            }
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error(`GET ${endpoint} returned non-JSON response`);
+                return [];
+            }
             return await response.json();
         } catch (error) {
             console.error(`GET ${endpoint} failed:`, error);
@@ -19,6 +28,15 @@ const API = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
+            if (!response.ok) {
+                console.error(`POST ${endpoint} failed with status: ${response.status}`);
+                return { success: false };
+            }
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error(`POST ${endpoint} returned non-JSON response`);
+                return { success: false };
+            }
             return await response.json();
         } catch (error) {
             console.error(`POST ${endpoint} failed:`, error);
@@ -33,6 +51,15 @@ const API = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
+            if (!response.ok) {
+                console.error(`PUT ${endpoint} failed with status: ${response.status}`);
+                return { success: false };
+            }
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error(`PUT ${endpoint} returned non-JSON response`);
+                return { success: false };
+            }
             return await response.json();
         } catch (error) {
             console.error(`PUT ${endpoint} failed:`, error);
@@ -45,6 +72,15 @@ const API = {
             const response = await fetch(`${this.baseUrl}/api/${endpoint}`, {
                 method: 'DELETE'
             });
+            if (!response.ok) {
+                console.error(`DELETE ${endpoint} failed with status: ${response.status}`);
+                return { success: false };
+            }
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.error(`DELETE ${endpoint} returned non-JSON response`);
+                return { success: false };
+            }
             return await response.json();
         } catch (error) {
             console.error(`DELETE ${endpoint} failed:`, error);
