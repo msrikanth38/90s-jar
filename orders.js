@@ -115,6 +115,126 @@ const Orders = {
     populateItemSelect() {
         // Setup autocomplete for smart item input
         this.setupSmartItemAutocomplete();
+        // Setup autocomplete for customer search
+        this.setupCustomerAutocomplete();
+    },
+
+    setupCustomerAutocomplete() {
+        const input = document.getElementById('orderCustomerName');
+        const suggestionsDiv = document.getElementById('customerSuggestions');
+        if (!input || !suggestionsDiv) return;
+
+        // Remove existing listeners
+        input.removeEventListener('input', this.handleCustomerInput);
+        input.removeEventListener('focus', this.handleCustomerFocus);
+
+        // Bind handlers
+        this.handleCustomerInput = (e) => this.showCustomerSuggestions(e.target.value);
+        this.handleCustomerFocus = () => this.showCustomerSuggestions(input.value);
+
+        input.addEventListener('input', this.handleCustomerInput);
+        input.addEventListener('focus', this.handleCustomerFocus);
+    },
+
+    showCustomerSuggestions(query) {
+        const suggestionsDiv = document.getElementById('customerSuggestions');
+        if (!suggestionsDiv) return;
+
+        const q = query.toLowerCase().trim();
+        
+        if (q.length < 2) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+
+        // Search from customers AND order history for unique customers
+        const existingCustomers = new Map();
+        
+        // Add from customers list
+        DataStore.customers.forEach(c => {
+            const key = (c.name + c.phone).toLowerCase();
+            if (!existingCustomers.has(key)) {
+                existingCustomers.set(key, {
+                    name: c.name,
+                    phone: c.phone || '',
+                    email: c.email || '',
+                    address: c.address || '',
+                    source: 'customer'
+                });
+            }
+        });
+        
+        // Add from order history
+        DataStore.orderHistory.forEach(o => {
+            const name = o.customer_name || o.customerName;
+            const phone = o.customer_phone || o.customerPhone || '';
+            const key = (name + phone).toLowerCase();
+            if (!existingCustomers.has(key)) {
+                existingCustomers.set(key, {
+                    name: name,
+                    phone: phone,
+                    email: o.customer_email || o.customerEmail || '',
+                    address: o.customer_address || o.customerAddress || '',
+                    source: 'history'
+                });
+            }
+        });
+        
+        // Add from current orders
+        DataStore.orders.forEach(o => {
+            const name = o.customer_name || o.customerName;
+            const phone = o.customer_phone || o.customerPhone || '';
+            const key = (name + phone).toLowerCase();
+            if (!existingCustomers.has(key)) {
+                existingCustomers.set(key, {
+                    name: name,
+                    phone: phone,
+                    email: o.customer_email || o.customerEmail || '',
+                    address: o.customer_address || o.customerAddress || '',
+                    source: 'orders'
+                });
+            }
+        });
+
+        // Filter matching customers
+        const matches = Array.from(existingCustomers.values()).filter(c => 
+            c.name.toLowerCase().includes(q) ||
+            c.phone.toLowerCase().includes(q) ||
+            c.email.toLowerCase().includes(q)
+        ).slice(0, 8);
+
+        if (matches.length === 0) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+
+        suggestionsDiv.innerHTML = matches.map(c => `
+            <div class="suggestion-item customer-suggestion" onclick="Orders.selectCustomer('${c.name.replace(/'/g, "\\'")}', '${c.phone.replace(/'/g, "\\'")}', '${c.email.replace(/'/g, "\\'")}', '${c.address.replace(/'/g, "\\'")}')">
+                <div class="suggestion-main">
+                    <span class="suggestion-name"><i class="fas fa-user"></i> ${c.name}</span>
+                    ${c.phone ? `<span class="suggestion-phone"><i class="fas fa-phone"></i> ${c.phone}</span>` : ''}
+                </div>
+                ${c.email ? `<span class="suggestion-email"><i class="fas fa-envelope"></i> ${c.email}</span>` : ''}
+            </div>
+        `).join('');
+        
+        suggestionsDiv.style.display = 'block';
+    },
+
+    selectCustomer(name, phone, email, address) {
+        document.getElementById('orderCustomerName').value = name;
+        document.getElementById('orderCustomerPhone').value = phone;
+        if (document.getElementById('orderCustomerEmail')) {
+            document.getElementById('orderCustomerEmail').value = email;
+        }
+        if (document.getElementById('orderCustomerAddress')) {
+            document.getElementById('orderCustomerAddress').value = address;
+        }
+        document.getElementById('customerSuggestions').style.display = 'none';
+        
+        // Focus on deadline or items section
+        document.getElementById('orderDeadline').focus();
+        Toast.info('Customer Loaded', `${name}'s details have been filled in`);
     },
 
     setupSmartItemAutocomplete() {
@@ -133,6 +253,8 @@ const Orders = {
         this.handleDocumentClick = (e) => {
             if (!e.target.closest('.autocomplete-wrapper')) {
                 suggestionsDiv.style.display = 'none';
+                const customerSuggestions = document.getElementById('customerSuggestions');
+                if (customerSuggestions) customerSuggestions.style.display = 'none';
             }
         };
 
@@ -305,7 +427,7 @@ const Orders = {
     openComboSelector(comboType) {
         // comboType: '4-combo' for $22, '2-combo' for $15
         const itemCount = comboType === '4-combo' ? 4 : 2;
-        const price = comboType === '4-combo' ? 22.00 : 15.00;
+        const defaultPrice = comboType === '4-combo' ? 22.00 : 15.00;
         
         // Get available snack items
         const snacks = DataStore.inventory.filter(i => i.category === 'snacks');
@@ -314,26 +436,48 @@ const Orders = {
             <label class="combo-item-checkbox">
                 <input type="checkbox" name="comboItem" value="${item.id}" data-name="${item.name}">
                 <span class="checkbox-label">${item.name}</span>
+                <span class="checkbox-stock">${item.quantity} in stock</span>
             </label>
         `).join('');
         
         const modalHtml = `
             <div id="comboSelectorModal" class="modal active">
-                <div class="modal-content">
+                <div class="modal-content combo-modal">
                     <div class="modal-header">
-                        <h3><i class="fas fa-gift"></i> Select ${itemCount} Items for Combo ($${price})</h3>
+                        <h3><i class="fas fa-gift"></i> Create Combo (${itemCount} Items)</h3>
                         <button class="modal-close" onclick="Orders.closeComboSelector()">&times;</button>
                     </div>
                     <div class="modal-body">
-                        <p class="combo-instruction">Choose exactly <strong>${itemCount} items</strong> for this combo:</p>
+                        <p class="combo-instruction">Select exactly <strong>${itemCount} items</strong> for this combo:</p>
                         <div class="combo-checkboxes">
                             ${checkboxesHtml}
                         </div>
                         <p class="selected-count">Selected: <span id="comboSelectedCount">0</span> / ${itemCount}</p>
+                        
+                        <div class="combo-pricing">
+                            <div class="combo-price-row">
+                                <div class="combo-input-group">
+                                    <label><i class="fas fa-dollar-sign"></i> Combo Price</label>
+                                    <input type="number" id="comboPriceInput" class="form-control" value="${defaultPrice}" step="0.01" min="0">
+                                </div>
+                                <div class="combo-input-group">
+                                    <label><i class="fas fa-weight-hanging"></i> Total Weight</label>
+                                    <div class="combo-weight-input">
+                                        <input type="number" id="comboWeightInput" class="form-control" value="" placeholder="0" step="0.01">
+                                        <select id="comboWeightUnit" class="form-control">
+                                            <option value="g">g</option>
+                                            <option value="kg">kg</option>
+                                            <option value="lbs">lbs</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="combo-price-hint">💡 Default: $${defaultPrice.toFixed(2)} - You can adjust the price above</p>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-secondary" onclick="Orders.closeComboSelector()">Cancel</button>
-                        <button class="btn btn-primary" onclick="Orders.confirmComboSelection('${comboType}', ${itemCount}, ${price})">
+                        <button class="btn btn-primary" onclick="Orders.confirmComboSelection('${comboType}', ${itemCount})">
                             <i class="fas fa-check"></i> Add Combo
                         </button>
                     </div>
@@ -362,12 +506,33 @@ const Orders = {
         if (modal) modal.remove();
     },
     
-    confirmComboSelection(comboType, requiredCount, price) {
+    confirmComboSelection(comboType, requiredCount) {
         const checked = document.querySelectorAll('#comboSelectorModal input[name="comboItem"]:checked');
         
         if (checked.length !== requiredCount) {
             Toast.warning('Select Items', `Please select exactly ${requiredCount} items`);
             return;
+        }
+        
+        // Get custom price
+        const customPrice = parseFloat(document.getElementById('comboPriceInput').value) || (comboType === '4-combo' ? 22.00 : 15.00);
+        
+        // Get weight
+        const weightValue = parseFloat(document.getElementById('comboWeightInput').value) || 0;
+        const weightUnit = document.getElementById('comboWeightUnit').value;
+        
+        // Convert weight to grams for storage
+        let weightInGrams = 0;
+        let weightDisplay = '';
+        if (weightValue > 0) {
+            if (weightUnit === 'kg') {
+                weightInGrams = weightValue * 1000;
+            } else if (weightUnit === 'lbs') {
+                weightInGrams = weightValue * 453.592;
+            } else {
+                weightInGrams = weightValue;
+            }
+            weightDisplay = `${weightValue} ${weightUnit}`;
         }
         
         const selectedItems = Array.from(checked).map(cb => ({
@@ -382,17 +547,19 @@ const Orders = {
         this.currentOrder.items.push({
             itemId: 'combo_' + Date.now(),
             name: comboName,
-            price: price,
+            price: customPrice,
             quantity: 1,
-            total: price,
+            total: customPrice,
             isCombo: true,
             comboItems: selectedItems,
-            comboDescription: itemNames
+            comboDescription: itemNames,
+            weight: weightInGrams,
+            weightDisplay: weightDisplay
         });
         
         this.updateOrderSummary();
         this.closeComboSelector();
-        Toast.success('Combo Added', `${comboName} added with: ${itemNames}`);
+        Toast.success('Combo Added', `${comboName} ($${customPrice.toFixed(2)}) added with: ${itemNames}`);
     },
 
     addComboToOrder() {
@@ -650,11 +817,11 @@ const Orders = {
             return;
         }
         
-        // Send local datetime so income is recorded for TODAY (user's timezone)
-        const localDateTime = new Date().toISOString();
+        // Use Texas CST time so income is recorded for TODAY in Texas timezone
+        const texasDateTime = Utils.getTexasISOString();
         
         // Update status to completed and move to history
-        const result = await API.updateOrderStatus(this.viewingOrderId, 'completed', localDateTime);
+        const result = await API.updateOrderStatus(this.viewingOrderId, 'completed', texasDateTime);
         
         if (result.success) {
             Toast.success('Order Completed', `Order moved to history. Income: ${Utils.formatCurrency(order.total)}`);
@@ -728,7 +895,7 @@ const Orders = {
                 
                 <div class="order-info">
                     <p><strong>Order:</strong> ${order.order_id || order.orderId}</p>
-                    <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+                    <p><strong>Date:</strong> ${Utils.getTexasDate()}</p>
                     <p><strong>Customer:</strong> ${order.customer_name || order.customerName}</p>
                     <p><strong>Phone:</strong> ${order.customer_phone || order.customerPhone || 'N/A'}</p>
                     ${order.customer_address || order.customerAddress ? `<p><strong>Address:</strong> ${order.customer_address || order.customerAddress}</p>` : ''}
@@ -828,7 +995,7 @@ const Orders = {
         const customerName = order.customer_name || order.customerName;
         const customerPhone = order.customer_phone || order.customerPhone || '';
         const customerAddress = order.customer_address || order.customerAddress || '';
-        const orderDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: '2-digit' });
+        const orderDate = new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago', year: 'numeric', month: 'short', day: '2-digit' });
         
         // Build items list HTML
         const itemsHtml = (order.items || []).map(item => {

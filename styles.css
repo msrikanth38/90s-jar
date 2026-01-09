@@ -316,6 +316,24 @@ body {
     background: var(--danger);
 }
 
+.btn-icon.success {
+    color: var(--success);
+}
+
+.btn-icon.success:hover {
+    background: var(--success);
+    color: white;
+}
+
+.btn-success {
+    background: var(--success);
+    color: white;
+}
+
+.btn-success:hover {
+    background: #1b7a35;
+}
+
 .btn-group {
     display: flex;
     gap: 10px;
@@ -1093,6 +1111,23 @@ body {
     font-size: 0.85rem;
 }
 
+/* Repeat Order Info */
+.repeat-order-info {
+    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+    border-radius: var(--radius-md);
+    padding: 15px;
+    border: 1px solid #90caf9;
+}
+
+.repeat-order-info p {
+    margin: 6px 0;
+    font-size: 0.9rem;
+}
+
+.repeat-order-info p strong {
+    color: var(--primary);
+}
+
 .history-items-list {
     background: var(--bg-secondary);
     border-radius: var(--radius);
@@ -1804,15 +1839,43 @@ textarea.form-control {
 .add-item-box {
     background: var(--bg-primary);
     padding: 15px;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     margin-bottom: 15px;
+    border: 1px solid var(--border-light);
+}
+
+.add-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.add-item-header i {
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.add-item-header span:first-of-type {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.add-item-header .hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-left: auto;
 }
 
 .add-item-box label {
     display: block;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
-    margin-bottom: 8px;
+    margin-bottom: 5px;
+    font-weight: 500;
 }
 
 .add-item-box label .hint {
@@ -1833,15 +1896,90 @@ textarea.form-control {
 
 /* Smart Item Entry */
 .smart-entry {
-    background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+    background: linear-gradient(135deg, #f8f9fa 0%, #e8f4fd 100%);
     border: 1px solid #90caf9;
 }
 
 .smart-item-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.smart-item-inputs .input-row {
+    display: flex;
+    gap: 10px;
+}
+
+.smart-item-inputs .input-row.three-cols {
     display: grid;
-    grid-template-columns: 2fr 80px 60px 120px 40px;
-    gap: 8px;
+    grid-template-columns: 1fr 1fr 1.5fr;
+    gap: 10px;
+}
+
+.smart-item-inputs .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.smart-item-inputs .input-group label {
+    margin-bottom: 0;
+}
+
+.smart-item-inputs .input-group .form-control {
+    width: 100%;
+}
+
+.smart-item-inputs .weight-group .weight-input-group {
+    display: flex;
+    gap: 5px;
+}
+
+.smart-item-inputs .weight-group .weight-input-group input {
+    flex: 1;
+    min-width: 0;
+}
+
+.smart-item-inputs .weight-group .weight-input-group select {
+    width: 60px;
+    flex-shrink: 0;
+}
+
+.add-item-btn {
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    display: flex;
     align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+/* Combo Entry */
+.combo-entry {
+    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+    border: 1px solid #ffca28;
+}
+
+.combo-inputs {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.combo-inputs select {
+    flex: 1;
+}
+
+.add-combo-btn {
+    padding: 10px 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
 }
 
 .autocomplete-wrapper {
@@ -1913,6 +2051,56 @@ textarea.form-control {
 
 .suggestion-item.manual-add:hover {
     background: #c8e6c9;
+}
+
+/* Customer Suggestions */
+.customer-suggestions {
+    max-height: 280px;
+}
+
+.customer-suggestion {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 4px;
+}
+
+.customer-suggestion .suggestion-main {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    width: 100%;
+}
+
+.customer-suggestion .suggestion-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.customer-suggestion .suggestion-name i {
+    color: var(--primary);
+    margin-right: 6px;
+}
+
+.customer-suggestion .suggestion-phone {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.customer-suggestion .suggestion-phone i {
+    color: var(--success);
+    margin-right: 4px;
+}
+
+.customer-suggestion .suggestion-email {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    padding-left: 20px;
+}
+
+.customer-suggestion .suggestion-email i {
+    color: var(--info);
+    margin-right: 4px;
 }
 
 .weight-input-group {
@@ -2554,32 +2742,47 @@ textarea.form-control {
         max-height: 180px;
     }
     
-    .smart-item-inputs {
-        grid-template-columns: 1fr;
+    .smart-item-inputs .input-row.three-cols {
+        grid-template-columns: 1fr 1fr;
         gap: 10px;
     }
     
-    .smart-item-inputs .autocomplete-wrapper {
-        grid-column: 1;
+    .smart-item-inputs .input-row.three-cols .input-group:last-child {
+        grid-column: 1 / -1;
     }
     
-    .smart-item-inputs .weight-input-group {
-        display: flex;
-        gap: 8px;
-    }
-    
-    .smart-item-inputs .weight-input-group input {
-        flex: 1;
-    }
-    
-    .ingredient-input-row {
+    .add-item-header {
         flex-wrap: wrap;
     }
     
+    .add-item-header .hint {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 5px;
+    }
+    
+    .combo-inputs {
+        flex-direction: column;
+    }
+    
+    .combo-inputs select,
+    .add-combo-btn {
+        width: 100%;
+    }
+    
+    .combo-price-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .ingredient-input-row {
+        flex-wrap: wrap;
+    }
+
     .ingredient-input-row input {
         flex: 1 1 calc(50% - 5px);
     }
-    
+
     .btn {
         padding: 8px 15px;
         font-size: 0.85rem;
@@ -2587,13 +2790,14 @@ textarea.form-control {
 }
 
 @media (max-width: 768px) {
-    .smart-item-inputs {
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
+    .smart-item-inputs .input-row.three-cols {
+        grid-template-columns: 1fr 1fr 1fr;
     }
     
-    .smart-item-inputs .autocomplete-wrapper {
-        grid-column: 1 / -1;
+    .add-item-header .hint {
+        width: auto;
+        margin-left: auto;
+        margin-top: 0;
     }
 }
 
@@ -2608,7 +2812,7 @@ textarea.form-control {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 10px;
-    max-height: 300px;
+    max-height: 250px;
     overflow-y: auto;
     padding: 10px;
     background: var(--bg-primary);
@@ -2626,6 +2830,7 @@ textarea.form-control {
     cursor: pointer;
     transition: all 0.2s;
     border: 2px solid transparent;
+    flex-wrap: wrap;
 }
 
 .combo-item-checkbox:hover {
@@ -2647,6 +2852,20 @@ textarea.form-control {
 .checkbox-label {
     font-size: 0.9rem;
     font-weight: 500;
+    flex: 1;
+}
+
+.checkbox-stock {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: rgba(0,0,0,0.05);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.combo-item-checkbox:has(input:checked) .checkbox-stock {
+    background: rgba(255,255,255,0.2);
+    color: white;
 }
 
 .selected-count {
@@ -2661,6 +2880,73 @@ textarea.form-control {
 
 .selected-count span {
     font-size: 1.1rem;
+}
+
+/* Combo Pricing Section */
+.combo-pricing {
+    margin-top: 20px;
+    padding: 15px;
+    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+    border-radius: var(--radius-md);
+    border: 1px solid #ffca28;
+}
+
+.combo-price-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.combo-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.combo-input-group label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.combo-input-group label i {
+    color: var(--primary);
+}
+
+.combo-input-group .form-control {
+    padding: 10px 12px;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.combo-weight-input {
+    display: flex;
+    gap: 8px;
+}
+
+.combo-weight-input input {
+    flex: 1;
+    min-width: 0;
+}
+
+.combo-weight-input select {
+    width: 65px;
+    flex-shrink: 0;
+}
+
+.combo-price-hint {
+    margin-top: 12px;
+    margin-bottom: 0;
+    font-size: 0.8rem;
+    color: #8d6e63;
+    text-align: center;
+}
+
+.combo-modal .modal-content {
+    max-width: 550px;
 }
 
 /* ===== Sidebar Overlay ===== */

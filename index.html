@@ -654,8 +654,11 @@
                     <div class="order-customer-section">
                         <h4>Customer Details</h4>
                         <div class="form-group">
-                            <label>Customer Name *</label>
-                            <input type="text" id="orderCustomerName" class="form-control" placeholder="Enter customer name" required>
+                            <label>Customer Name * <span class="hint">(Type to search existing customers)</span></label>
+                            <div class="autocomplete-wrapper">
+                                <input type="text" id="orderCustomerName" class="form-control" placeholder="Start typing customer name, phone, or email..." required autocomplete="off">
+                                <div id="customerSuggestions" class="suggestions-dropdown customer-suggestions"></div>
+                            </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
@@ -688,37 +691,63 @@
                         
                         <!-- Smart Item Entry with Auto-suggest -->
                         <div class="add-item-box smart-entry">
-                            <label>Add Item <span class="hint">(Type to search inventory or add custom)</span></label>
+                            <div class="add-item-header">
+                                <i class="fas fa-search"></i>
+                                <span>Search & Add Item</span>
+                                <span class="hint">Type name to search inventory or add custom item</span>
+                            </div>
                             <div class="smart-item-inputs">
-                                <div class="autocomplete-wrapper">
-                                    <input type="text" id="smartItemName" class="form-control" placeholder="Start typing item name..." autocomplete="off">
-                                    <div id="itemSuggestions" class="suggestions-dropdown"></div>
+                                <div class="input-row">
+                                    <div class="input-group autocomplete-wrapper">
+                                        <label>Item Name</label>
+                                        <input type="text" id="smartItemName" class="form-control" placeholder="Search item..." autocomplete="off">
+                                        <div id="itemSuggestions" class="suggestions-dropdown"></div>
+                                    </div>
                                 </div>
-                                <input type="number" id="smartItemPrice" class="form-control" placeholder="Price $" step="0.01">
-                                <input type="number" id="smartItemQty" class="form-control qty-input" value="1" min="1" placeholder="Qty">
-                                <div class="weight-input-group">
-                                    <input type="number" id="smartItemWeight" class="form-control" placeholder="Weight" step="0.01">
-                                    <select id="smartItemWeightUnit" class="form-control weight-unit">
-                                        <option value="g">g</option>
-                                        <option value="kg">kg</option>
-                                        <option value="lbs">lbs</option>
-                                    </select>
+                                <div class="input-row three-cols">
+                                    <div class="input-group">
+                                        <label>Price ($)</label>
+                                        <input type="number" id="smartItemPrice" class="form-control" placeholder="0.00" step="0.01">
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Quantity</label>
+                                        <input type="number" id="smartItemQty" class="form-control" value="1" min="1">
+                                    </div>
+                                    <div class="input-group weight-group">
+                                        <label>Weight</label>
+                                        <div class="weight-input-group">
+                                            <input type="number" id="smartItemWeight" class="form-control" placeholder="0" step="0.01">
+                                            <select id="smartItemWeightUnit" class="form-control weight-unit">
+                                                <option value="g">g</option>
+                                                <option value="kg">kg</option>
+                                                <option value="lbs">lbs</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
-                                <button class="btn btn-sm btn-primary" onclick="Orders.addSmartItem()"><i class="fas fa-plus"></i></button>
+                                <button class="btn btn-primary add-item-btn" onclick="Orders.addSmartItem()">
+                                    <i class="fas fa-plus"></i> Add Item
+                                </button>
                             </div>
                             <input type="hidden" id="smartItemId" value="">
                         </div>
 
                         <!-- Combos -->
-                        <div class="add-item-box">
-                            <label>Add Combo</label>
-                            <div class="add-item-row">
+                        <div class="add-item-box combo-entry">
+                            <div class="add-item-header">
+                                <i class="fas fa-gift"></i>
+                                <span>Add Combo Deal</span>
+                                <span class="hint">Select items for special combo pricing</span>
+                            </div>
+                            <div class="combo-inputs">
                                 <select id="orderComboSelect" class="form-control">
-                                    <option value="">Select Combo...</option>
-                                    <option value="4-combo">Any 4 Items - $22</option>
-                                    <option value="2-combo">Any 2 Items - $15</option>
+                                    <option value="">Choose Combo Type...</option>
+                                    <option value="4-combo">🎁 Any 4 Items - $22</option>
+                                    <option value="2-combo">🎁 Any 2 Items - $15</option>
                                 </select>
-                                <button class="btn btn-sm" onclick="Orders.addComboToOrder()"><i class="fas fa-gift"></i> Add</button>
+                                <button class="btn btn-secondary add-combo-btn" onclick="Orders.addComboToOrder()">
+                                    <i class="fas fa-gift"></i> Select Items
+                                </button>
                             </div>
                         </div>
 

@@ -259,12 +259,32 @@ const DataStore = {
 
 // ===== Utility Functions =====
 const Utils = {
+    // Texas Central Time zone (CST/CDT)
+    TEXAS_TIMEZONE: 'America/Chicago',
+    
+    getTexasDate() {
+        return new Date().toLocaleDateString('en-US', { timeZone: this.TEXAS_TIMEZONE });
+    },
+    
+    getTexasDateTime() {
+        return new Date().toLocaleString('en-US', { timeZone: this.TEXAS_TIMEZONE });
+    },
+    
+    getTexasISOString() {
+        // Get current time in Texas timezone as ISO-like string
+        const now = new Date();
+        const texasTime = new Date(now.toLocaleString('en-US', { timeZone: this.TEXAS_TIMEZONE }));
+        return texasTime.toISOString();
+    },
+    
     formatCurrency(amount) {
         return '$' + Number(amount).toFixed(2);
     },
 
     formatDate(date) {
+        if (!date) return 'N/A';
         return new Date(date).toLocaleDateString('en-US', {
+            timeZone: this.TEXAS_TIMEZONE,
             day: '2-digit',
             month: 'short',
             year: 'numeric'
@@ -272,7 +292,9 @@ const Utils = {
     },
 
     formatDateTime(date) {
+        if (!date) return 'N/A';
         return new Date(date).toLocaleString('en-US', {
+            timeZone: this.TEXAS_TIMEZONE,
             day: '2-digit',
             month: 'short',
             year: 'numeric',
@@ -280,17 +302,33 @@ const Utils = {
             minute: '2-digit'
         });
     },
+    
+    formatDateForInput(date) {
+        // Format date for HTML input type="date" (YYYY-MM-DD)
+        if (!date) return '';
+        const d = new Date(date);
+        const texasDate = new Date(d.toLocaleString('en-US', { timeZone: this.TEXAS_TIMEZONE }));
+        const year = texasDate.getFullYear();
+        const month = String(texasDate.getMonth() + 1).padStart(2, '0');
+        const day = String(texasDate.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    },
 
     getInitials(name) {
         return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
     },
 
     daysUntil(date) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        // Calculate days until deadline using Texas time
+        const now = new Date();
+        const texasNow = new Date(now.toLocaleString('en-US', { timeZone: this.TEXAS_TIMEZONE }));
+        texasNow.setHours(0, 0, 0, 0);
+        
         const target = new Date(date);
-        target.setHours(0, 0, 0, 0);
-        return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+        const texasTarget = new Date(target.toLocaleString('en-US', { timeZone: this.TEXAS_TIMEZONE }));
+        texasTarget.setHours(0, 0, 0, 0);
+        
+        return Math.ceil((texasTarget - texasNow) / (1000 * 60 * 60 * 24));
     },
 
     debounce(func, wait) {

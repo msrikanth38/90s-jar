@@ -335,6 +335,7 @@ const History = {
                 <td><strong class="total-amount">${Utils.formatCurrency(order.total)}</strong></td>
                 <td>${Utils.formatDateTime(order.delivered_at || order.deliveredAt)}</td>
                 <td class="history-actions">
+                    <button class="btn-icon success" onclick="History.repeatOrder('${order.id}')" title="Repeat Order"><i class="fas fa-redo"></i></button>
                     <button class="btn-icon" onclick="History.viewLabels('${order.id}')" title="View Labels"><i class="fas fa-tag"></i></button>
                     <button class="btn-icon" onclick="History.viewDetails('${order.id}')" title="View Details"><i class="fas fa-eye"></i></button>
                     <button class="btn-icon danger" onclick="History.deleteRecord('${order.id}')" title="Delete"><i class="fas fa-trash"></i></button>
@@ -387,6 +388,9 @@ const History = {
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-secondary" onclick="History.closeModal()">Close</button>
+                        <button class="btn btn-success" onclick="History.repeatOrder('${order.id}')">
+                            <i class="fas fa-redo"></i> Repeat Order
+                        </button>
                         <button class="btn btn-primary" onclick="History.viewLabels('${order.id}')">
                             <i class="fas fa-tag"></i> Print Labels
                         </button>
@@ -509,6 +513,100 @@ const History = {
             this.refresh();
         } else {
             Toast.error('Error', 'Failed to delete record');
+        }
+    },
+
+    repeatOrder(orderId) {
+        const order = DataStore.orderHistory.find(o => o.id === orderId);
+        if (!order) return;
+
+        // Show modal to set new deadline
+        const modalHtml = `
+            <div id="repeatOrderModal" class="modal active">
+                <div class="modal-content" style="max-width: 450px;">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-redo"></i> Repeat Order</h3>
+                        <button class="modal-close" onclick="History.closeRepeatModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="repeat-order-info">
+                            <p><strong>Customer:</strong> ${order.customer_name || order.customerName}</p>
+                            <p><strong>Items:</strong> ${(order.items || []).map(i => i.name).join(', ')}</p>
+                            <p><strong>Total:</strong> ${Utils.formatCurrency(order.total)}</p>
+                        </div>
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label><strong>Set New Deadline *</strong></label>
+                            <input type="date" id="repeatOrderDeadline" class="form-control" required>
+                        </div>
+                        <p class="form-hint" style="font-size: 0.85rem; color: #666; margin-top: 10px;">
+                            <i class="fas fa-info-circle"></i> This will create a new order with the same items and customer details.
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="History.closeRepeatModal()">Cancel</button>
+                        <button class="btn btn-primary" onclick="History.confirmRepeatOrder('${orderId}')">
+                            <i class="fas fa-plus"></i> Create New Order
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('repeatOrderModal')?.remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        
+        // Set default deadline to tomorrow (Texas time)
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const texasTomorrow = new Date(tomorrow.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+        const year = texasTomorrow.getFullYear();
+        const month = String(texasTomorrow.getMonth() + 1).padStart(2, '0');
+        const day = String(texasTomorrow.getDate()).padStart(2, '0');
+        document.getElementById('repeatOrderDeadline').value = `${year}-${month}-${day}`;
+    },
+
+    closeRepeatModal() {
+        document.getElementById('repeatOrderModal')?.remove();
+    },
+
+    async confirmRepeatOrder(orderId) {
+        const order = DataStore.orderHistory.find(o => o.id === orderId);
+        if (!order) return;
+
+        const deadline = document.getElementById('repeatOrderDeadline').value;
+        if (!deadline) {
+            Toast.warning('Deadline Required', 'Please set a deadline for the new order');
+            return;
+        }
+
+        // Create new order with same details
+        const newOrder = {
+            customerName: order.customer_name || order.customerName,
+            customerPhone: order.customer_phone || order.customerPhone || '',
+            customerEmail: order.customer_email || order.customerEmail || '',
+            customerAddress: order.customer_address || order.customerAddress || '',
+            items: JSON.parse(JSON.stringify(order.items || [])), // Deep copy items
+            subtotal: order.subtotal || order.total,
+            discount: order.discount || 0,
+            total: order.total,
+            deadline: deadline,
+            notes: `Repeat of order ${order.order_id || order.orderId}`,
+            status: 'pending'
+        };
+
+        const result = await API.createOrder(newOrder);
+        
+        if (result.success) {
+            Toast.success('Order Created', `New order created for ${newOrder.customerName}`);
+            this.closeRepeatModal();
+            await DataStore.loadAll();
+            Orders.refresh();
+            Dashboard.refresh();
+            
+            // Switch to orders tab
+            document.querySelector('.nav-item[data-tab="orders"]')?.click();
+        } else {
+            Toast.error('Error', 'Failed to create repeat order');
         }
     },
 
