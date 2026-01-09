@@ -686,25 +686,27 @@
                     <div class="order-items-section">
                         <h4>Add Items</h4>
                         
-                        <!-- From Inventory -->
-                        <div class="add-item-box">
-                            <label>From Inventory</label>
-                            <div class="add-item-row">
-                                <select id="orderItemSelect" class="form-control"></select>
-                                <input type="number" id="orderItemQty" class="form-control qty-input" value="1" min="1">
-                                <button class="btn btn-sm" onclick="Orders.addItemToOrder()"><i class="fas fa-plus"></i></button>
+                        <!-- Smart Item Entry with Auto-suggest -->
+                        <div class="add-item-box smart-entry">
+                            <label>Add Item <span class="hint">(Type to search inventory or add custom)</span></label>
+                            <div class="smart-item-inputs">
+                                <div class="autocomplete-wrapper">
+                                    <input type="text" id="smartItemName" class="form-control" placeholder="Start typing item name..." autocomplete="off">
+                                    <div id="itemSuggestions" class="suggestions-dropdown"></div>
+                                </div>
+                                <input type="number" id="smartItemPrice" class="form-control" placeholder="Price $" step="0.01">
+                                <input type="number" id="smartItemQty" class="form-control qty-input" value="1" min="1" placeholder="Qty">
+                                <div class="weight-input-group">
+                                    <input type="number" id="smartItemWeight" class="form-control" placeholder="Weight" step="0.01">
+                                    <select id="smartItemWeightUnit" class="form-control weight-unit">
+                                        <option value="g">g</option>
+                                        <option value="kg">kg</option>
+                                        <option value="lbs">lbs</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-sm btn-primary" onclick="Orders.addSmartItem()"><i class="fas fa-plus"></i></button>
                             </div>
-                        </div>
-
-                        <!-- Manual Entry -->
-                        <div class="add-item-box manual-entry">
-                            <label>Add Manually</label>
-                            <div class="manual-item-inputs">
-                                <input type="text" id="manualItemName" class="form-control" placeholder="Item name">
-                                <input type="number" id="manualItemPrice" class="form-control" placeholder="Price $" step="0.01">
-                                <input type="number" id="manualItemQty" class="form-control qty-input" value="1" min="1">
-                                <button class="btn btn-sm" onclick="Orders.addManualItem()"><i class="fas fa-plus"></i></button>
-                            </div>
+                            <input type="hidden" id="smartItemId" value="">
                         </div>
 
                         <!-- Combos -->
@@ -726,6 +728,10 @@
                                 <i class="fas fa-shopping-basket"></i>
                                 <p>No items added yet</p>
                             </div>
+                        </div>
+
+                        <div class="order-weight-summary">
+                            <span><i class="fas fa-weight-hanging"></i> Total Weight: <strong id="orderTotalWeight">0 g</strong></span>
                         </div>
 
                         <div class="order-totals">

@@ -104,25 +104,183 @@ const Orders = {
     },
 
     populateItemSelect() {
-        const select = document.getElementById('orderItemSelect');
-        if (!select) return;
+        // Setup autocomplete for smart item input
+        this.setupSmartItemAutocomplete();
+    },
+
+    setupSmartItemAutocomplete() {
+        const input = document.getElementById('smartItemName');
+        const suggestionsDiv = document.getElementById('itemSuggestions');
+        if (!input || !suggestionsDiv) return;
+
+        // Remove existing listeners
+        input.removeEventListener('input', this.handleSmartItemInput);
+        input.removeEventListener('focus', this.handleSmartItemFocus);
+        document.removeEventListener('click', this.handleDocumentClick);
+
+        // Bind handlers
+        this.handleSmartItemInput = (e) => this.showItemSuggestions(e.target.value);
+        this.handleSmartItemFocus = () => this.showItemSuggestions(input.value);
+        this.handleDocumentClick = (e) => {
+            if (!e.target.closest('.autocomplete-wrapper')) {
+                suggestionsDiv.style.display = 'none';
+            }
+        };
+
+        input.addEventListener('input', this.handleSmartItemInput);
+        input.addEventListener('focus', this.handleSmartItemFocus);
+        document.addEventListener('click', this.handleDocumentClick);
+    },
+
+    showItemSuggestions(query) {
+        const suggestionsDiv = document.getElementById('itemSuggestions');
+        if (!suggestionsDiv) return;
+
+        const q = query.toLowerCase().trim();
         
-        select.innerHTML = '<option value="">Select an item...</option>';
-        
-        const pickles = DataStore.inventory.filter(i => i.category === 'pickles');
-        const snacks = DataStore.inventory.filter(i => i.category === 'snacks');
-        
-        if (pickles.length > 0) {
-            select.innerHTML += `<optgroup label="🥒 Pickles">${pickles.map(i => 
-                `<option value="${i.id}" data-price="${i.selling_price || i.sellingPrice}" ${i.stock <= 0 ? 'disabled' : ''}>${i.name} - ${Utils.formatCurrency(i.selling_price || i.sellingPrice)} ${i.stock <= 0 ? '(Out of Stock)' : `(${i.stock} left)`}</option>`
-            ).join('')}</optgroup>`;
+        if (q.length === 0) {
+            // Show all inventory items when empty
+            const allItems = DataStore.inventory.slice(0, 10);
+            if (allItems.length > 0) {
+                suggestionsDiv.innerHTML = allItems.map(item => `
+                    <div class="suggestion-item" onclick="Orders.selectSuggestion('${item.id}')">
+                        <span class="suggestion-name">${item.category === 'pickles' ? '🥒' : '🍪'} ${item.name}</span>
+                        <span class="suggestion-price">${Utils.formatCurrency(item.selling_price || item.sellingPrice)}</span>
+                        <span class="suggestion-stock ${item.stock <= 0 ? 'out-of-stock' : ''}">${item.stock} left</span>
+                    </div>
+                `).join('');
+                suggestionsDiv.style.display = 'block';
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+            return;
         }
-        
-        if (snacks.length > 0) {
-            select.innerHTML += `<optgroup label="🍪 Snacks">${snacks.map(i => 
-                `<option value="${i.id}" data-price="${i.selling_price || i.sellingPrice}" ${i.stock <= 0 ? 'disabled' : ''}>${i.name} - ${Utils.formatCurrency(i.selling_price || i.sellingPrice)} ${i.stock <= 0 ? '(Out of Stock)' : `(${i.stock} left)`}</option>`
-            ).join('')}</optgroup>`;
+
+        // Filter inventory by query
+        const matches = DataStore.inventory.filter(item => 
+            item.name.toLowerCase().includes(q)
+        ).slice(0, 8);
+
+        if (matches.length > 0) {
+            suggestionsDiv.innerHTML = matches.map(item => `
+                <div class="suggestion-item" onclick="Orders.selectSuggestion('${item.id}')">
+                    <span class="suggestion-name">${item.category === 'pickles' ? '🥒' : '🍪'} ${item.name}</span>
+                    <span class="suggestion-price">${Utils.formatCurrency(item.selling_price || item.sellingPrice)}</span>
+                    <span class="suggestion-stock ${item.stock <= 0 ? 'out-of-stock' : ''}">${item.stock} left</span>
+                </div>
+            `).join('') + `
+                <div class="suggestion-item manual-add" onclick="Orders.useAsManual()">
+                    <span class="suggestion-name"><i class="fas fa-plus-circle"></i> Add "${query}" as custom item</span>
+                </div>
+            `;
+        } else {
+            suggestionsDiv.innerHTML = `
+                <div class="suggestion-item manual-add" onclick="Orders.useAsManual()">
+                    <span class="suggestion-name"><i class="fas fa-plus-circle"></i> Add "${query}" as custom item</span>
+                </div>
+            `;
         }
+        suggestionsDiv.style.display = 'block';
+    },
+
+    selectSuggestion(itemId) {
+        const item = DataStore.inventory.find(i => i.id === itemId);
+        if (!item) return;
+
+        document.getElementById('smartItemName').value = item.name;
+        document.getElementById('smartItemPrice').value = (item.selling_price || item.sellingPrice).toFixed(2);
+        document.getElementById('smartItemId').value = itemId;
+        document.getElementById('itemSuggestions').style.display = 'none';
+        
+        // Focus on quantity
+        document.getElementById('smartItemQty').focus();
+        document.getElementById('smartItemQty').select();
+    },
+
+    useAsManual() {
+        document.getElementById('smartItemId').value = '';
+        document.getElementById('itemSuggestions').style.display = 'none';
+        document.getElementById('smartItemPrice').focus();
+    },
+
+    addSmartItem() {
+        const name = document.getElementById('smartItemName').value.trim();
+        const price = parseFloat(document.getElementById('smartItemPrice').value) || 0;
+        const qty = parseInt(document.getElementById('smartItemQty').value) || 1;
+        const weight = parseFloat(document.getElementById('smartItemWeight').value) || 0;
+        const weightUnit = document.getElementById('smartItemWeightUnit').value;
+        const itemId = document.getElementById('smartItemId').value;
+
+        if (!name) {
+            Toast.warning('Enter Name', 'Please enter or select an item');
+            return;
+        }
+        if (price <= 0) {
+            Toast.warning('Enter Price', 'Please enter a valid price');
+            return;
+        }
+
+        // Check inventory stock if it's from inventory
+        if (itemId) {
+            const invItem = DataStore.inventory.find(i => i.id === itemId);
+            if (invItem && invItem.stock < qty) {
+                Toast.warning('Insufficient Stock', `Only ${invItem.stock} available`);
+                return;
+            }
+        }
+
+        // Convert weight to grams for storage
+        let weightInGrams = weight;
+        if (weightUnit === 'kg') weightInGrams = weight * 1000;
+        if (weightUnit === 'lbs') weightInGrams = weight * 453.592;
+
+        const newItem = {
+            itemId: itemId || 'manual_' + Date.now(),
+            name: name,
+            price: price,
+            quantity: qty,
+            total: price * qty,
+            weight: weightInGrams,
+            weightDisplay: weight > 0 ? `${weight} ${weightUnit}` : '',
+            isCombo: false,
+            isManual: !itemId
+        };
+
+        // Check if same item exists (non-combo, same itemId)
+        if (itemId) {
+            const existing = this.currentOrder.items.find(i => i.itemId === itemId && !i.isCombo);
+            if (existing) {
+                existing.quantity += qty;
+                existing.total = existing.quantity * existing.price;
+                existing.weight = (existing.weight || 0) + weightInGrams;
+                if (weight > 0) {
+                    existing.weightDisplay = this.formatWeight(existing.weight);
+                }
+            } else {
+                this.currentOrder.items.push(newItem);
+            }
+        } else {
+            this.currentOrder.items.push(newItem);
+        }
+
+        this.updateOrderSummary();
+        
+        // Clear inputs
+        document.getElementById('smartItemName').value = '';
+        document.getElementById('smartItemPrice').value = '';
+        document.getElementById('smartItemQty').value = 1;
+        document.getElementById('smartItemWeight').value = '';
+        document.getElementById('smartItemWeightUnit').value = 'g';
+        document.getElementById('smartItemId').value = '';
+        
+        Toast.success('Item Added', `${name} × ${qty} added to order`);
+    },
+
+    formatWeight(grams) {
+        if (grams >= 1000) {
+            return `${(grams / 1000).toFixed(2)} kg`;
+        }
+        return `${grams.toFixed(0)} g`;
     },
 
     populateComboSelect() {
@@ -133,76 +291,6 @@ const Orders = {
         DataStore.combos.forEach(combo => {
             select.innerHTML += `<option value="${combo.id}" data-price="${combo.price}">${combo.name} - ${Utils.formatCurrency(combo.price)} (Save ${Utils.formatCurrency(combo.savings || 0)})</option>`;
         });
-    },
-
-    addItemToOrder() {
-        const select = document.getElementById('orderItemSelect');
-        const qty = parseInt(document.getElementById('orderItemQty').value) || 1;
-        const itemId = select.value;
-        
-        if (!itemId) {
-            Toast.warning('Select Item', 'Please select an item to add');
-            return;
-        }
-
-        const item = DataStore.inventory.find(i => i.id === itemId);
-        if (!item) return;
-
-        if (item.stock < qty) {
-            Toast.warning('Insufficient Stock', `Only ${item.stock} ${item.unit} available`);
-            return;
-        }
-
-        const existing = this.currentOrder.items.find(i => i.itemId === itemId && !i.isCombo);
-        if (existing) {
-            existing.quantity += qty;
-            existing.total = existing.quantity * existing.price;
-        } else {
-            this.currentOrder.items.push({
-                itemId,
-                name: item.name,
-                price: item.selling_price || item.sellingPrice,
-                quantity: qty,
-                total: (item.selling_price || item.sellingPrice) * qty,
-                isCombo: false
-            });
-        }
-
-        this.updateOrderSummary();
-        select.value = '';
-        document.getElementById('orderItemQty').value = 1;
-        Toast.success('Item Added', `${item.name} × ${qty} added to order`);
-    },
-
-    addManualItem() {
-        const name = document.getElementById('manualItemName').value.trim();
-        const price = parseFloat(document.getElementById('manualItemPrice').value) || 0;
-        const qty = parseInt(document.getElementById('manualItemQty').value) || 1;
-
-        if (!name) {
-            Toast.warning('Enter Name', 'Please enter item name');
-            return;
-        }
-        if (price <= 0) {
-            Toast.warning('Enter Price', 'Please enter a valid price');
-            return;
-        }
-
-        this.currentOrder.items.push({
-            itemId: 'manual_' + Date.now(),
-            name: name,
-            price: price,
-            quantity: qty,
-            total: price * qty,
-            isCombo: false,
-            isManual: true
-        });
-
-        this.updateOrderSummary();
-        document.getElementById('manualItemName').value = '';
-        document.getElementById('manualItemPrice').value = '';
-        document.getElementById('manualItemQty').value = 1;
-        Toast.success('Item Added', `${name} × ${qty} added to order`);
     },
 
     openComboSelector(comboType) {
@@ -324,6 +412,7 @@ const Orders = {
             document.getElementById('orderSubtotal').textContent = '$0.00';
             document.getElementById('orderDiscount').textContent = '$0.00';
             document.getElementById('orderTotal').textContent = '$0.00';
+            document.getElementById('orderTotalWeight').textContent = '0 g';
             return;
         }
 
@@ -332,12 +421,13 @@ const Orders = {
             if (item.isCombo && item.comboDescription) {
                 comboDetails = `<div class="combo-items-detail"><i class="fas fa-list"></i> ${item.comboDescription}</div>`;
             }
+            const weightInfo = item.weightDisplay ? `<span class="item-weight"><i class="fas fa-weight-hanging"></i> ${item.weightDisplay}</span>` : '';
             return `
                 <div class="order-summary-item ${item.isCombo ? 'combo-order-item' : ''}">
                     <div class="item-details">
                         <span class="item-name">${item.isCombo ? '📦 ' : ''}${item.isManual ? '✏️ ' : ''}${item.name}</span>
                         ${comboDetails}
-                        <span class="item-qty">${Utils.formatCurrency(item.price)} × ${item.quantity}</span>
+                        <span class="item-qty">${Utils.formatCurrency(item.price)} × ${item.quantity} ${weightInfo}</span>
                     </div>
                     <div class="item-actions">
                         <span class="item-total">${Utils.formatCurrency(item.total)}</span>
@@ -351,9 +441,14 @@ const Orders = {
         this.currentOrder.discount = parseFloat(document.getElementById('orderDiscountInput')?.value) || 0;
         this.currentOrder.total = this.currentOrder.subtotal - this.currentOrder.discount;
 
+        // Calculate total weight
+        const totalWeightGrams = this.currentOrder.items.reduce((sum, item) => sum + (item.weight || 0), 0);
+        this.currentOrder.totalWeight = totalWeightGrams;
+
         document.getElementById('orderSubtotal').textContent = Utils.formatCurrency(this.currentOrder.subtotal);
         document.getElementById('orderDiscount').textContent = Utils.formatCurrency(this.currentOrder.discount);
         document.getElementById('orderTotal').textContent = Utils.formatCurrency(this.currentOrder.total);
+        document.getElementById('orderTotalWeight').textContent = this.formatWeight(totalWeightGrams);
     },
 
     async saveOrder() {
@@ -575,14 +670,21 @@ const Orders = {
     },
 
     createReceiptHtml(order) {
-        const itemsHtml = (order.items || []).map(item => `
-            <tr>
-                <td style="padding: 5px; border-bottom: 1px dashed #ddd;">${item.isCombo ? '📦 ' : ''}${item.name}</td>
-                <td style="padding: 5px; border-bottom: 1px dashed #ddd; text-align: center;">${item.quantity}</td>
-                <td style="padding: 5px; border-bottom: 1px dashed #ddd; text-align: right;">$${item.price.toFixed(2)}</td>
-                <td style="padding: 5px; border-bottom: 1px dashed #ddd; text-align: right;">$${item.total.toFixed(2)}</td>
-            </tr>
-        `).join('');
+        const itemsHtml = (order.items || []).map(item => {
+            const weightText = item.weightDisplay ? ` (${item.weightDisplay})` : '';
+            return `
+                <tr>
+                    <td style="padding: 5px; border-bottom: 1px dashed #ddd;">${item.isCombo ? '📦 ' : ''}${item.name}${weightText}</td>
+                    <td style="padding: 5px; border-bottom: 1px dashed #ddd; text-align: center;">${item.quantity}</td>
+                    <td style="padding: 5px; border-bottom: 1px dashed #ddd; text-align: right;">$${item.price.toFixed(2)}</td>
+                    <td style="padding: 5px; border-bottom: 1px dashed #ddd; text-align: right;">$${item.total.toFixed(2)}</td>
+                </tr>
+            `;
+        }).join('');
+        
+        // Calculate total weight
+        const totalWeightGrams = (order.items || []).reduce((sum, item) => sum + (item.weight || 0), 0);
+        const totalWeightText = totalWeightGrams > 0 ? this.formatWeight(totalWeightGrams) : '';
         
         return `
             <!DOCTYPE html>
@@ -637,6 +739,7 @@ const Orders = {
                 <div class="totals">
                     <p><span>Subtotal:</span> <span>$${(order.subtotal || order.total).toFixed(2)}</span></p>
                     ${order.discount ? `<p><span>Discount:</span> <span>-$${order.discount.toFixed(2)}</span></p>` : ''}
+                    ${totalWeightText ? `<p><span>Total Weight:</span> <span>${totalWeightText}</span></p>` : ''}
                     <p class="grand-total"><span>TOTAL:</span> <span>$${order.total.toFixed(2)}</span></p>
                 </div>
                 
@@ -674,19 +777,30 @@ const Orders = {
         // Show payment row if delivered
         this.updatePaymentVisibility(order.status);
         
+        // Remove any existing weight summary
+        const existingWeightSummary = document.querySelector('.view-weight-summary');
+        if (existingWeightSummary) existingWeightSummary.remove();
+        
         document.getElementById('viewOrderItems').innerHTML = (order.items || []).map(item => {
             let comboLine = '';
             if (item.isCombo && item.comboDescription) {
                 comboLine = `<div class="view-item-combo"><i class="fas fa-list"></i> Items: ${item.comboDescription}</div>`;
             }
+            const weightLine = item.weightDisplay ? `<span class="view-item-weight"><i class="fas fa-weight-hanging"></i> ${item.weightDisplay}</span>` : '';
             return `
                 <div class="view-item ${item.isCombo ? 'view-item-is-combo' : ''}">
-                    <span>${item.isCombo ? '📦 ' : ''}${item.name}</span>
+                    <span>${item.isCombo ? '📦 ' : ''}${item.isManual ? '✏️ ' : ''}${item.name} ${weightLine}</span>
                     <span>${item.quantity} × ${Utils.formatCurrency(item.price)} = ${Utils.formatCurrency(item.total)}</span>
                     ${comboLine}
                 </div>
             `;
         }).join('');
+        
+        // Calculate and show total weight
+        const totalWeightGrams = (order.items || []).reduce((sum, item) => sum + (item.weight || 0), 0);
+        const weightSummary = totalWeightGrams > 0 ? `<div class="view-weight-summary"><i class="fas fa-weight-hanging"></i> Total Weight: <strong>${this.formatWeight(totalWeightGrams)}</strong></div>` : '';
+        document.getElementById('viewOrderItems').insertAdjacentHTML('afterend', weightSummary);
+        
         document.getElementById('viewOrderTotal').textContent = Utils.formatCurrency(order.total);
 
         Modal.open('viewOrderModal');
