@@ -1088,70 +1088,136 @@ body {
 
 .label-preview {
     border: 2px dashed var(--border-color);
-    padding: 25px;
+    padding: 20px;
     text-align: center;
-    max-width: 280px;
+    max-width: 320px;
     background: white;
+    border-radius: 12px;
+    margin: 0 auto;
 }
 
-.label-preview .label-header h2 {
+.label-preview .label-header {
+    margin-bottom: 8px;
+}
+
+.label-preview .label-logo {
     font-family: 'Playfair Display', serif;
+    font-size: 1.75rem;
+    font-weight: bold;
     color: var(--primary);
-    margin: 0;
+    letter-spacing: 1px;
 }
 
-.label-preview .label-header p {
-    font-size: 0.75rem;
+.label-preview .label-tagline {
+    font-size: 0.7rem;
     color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.label-preview .label-divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, var(--border-color), transparent);
+    margin: 10px 0;
 }
 
 .label-preview .label-product {
-    margin: 20px 0;
+    margin: 10px 0;
 }
 
-.label-preview .label-product h3 {
-    margin: 0 0 5px;
+.label-preview .product-name {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: var(--text-primary);
+    margin-bottom: 4px;
 }
 
-.label-preview .label-category {
+.label-preview .product-category {
     font-size: 0.8rem;
     color: var(--text-secondary);
 }
 
-.label-preview .label-qty {
+.label-preview .label-details {
+    background: var(--bg-card);
+    border-radius: 8px;
+    padding: 10px;
     margin: 10px 0;
-    font-size: 0.9rem;
 }
 
-.label-preview .label-price {
-    margin: 15px 0;
+.label-preview .detail-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
 }
 
-.label-preview .price-tag {
-    font-size: 1.75rem;
-    font-weight: 700;
+.label-preview .detail-item {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.label-preview .detail-price {
+    font-size: 1.2rem;
     color: var(--success);
+    font-weight: bold;
 }
 
-.label-preview .offer-tag {
+.label-preview .label-offer {
     display: inline-block;
     background: var(--danger);
     color: white;
     padding: 5px 15px;
     border-radius: 20px;
-    font-size: 0.85rem;
-    margin-top: 10px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin: 8px 0;
 }
 
 .label-preview .label-expiry {
     font-size: 0.75rem;
     color: var(--text-muted);
+    margin: 8px 0;
+}
+
+.label-preview .label-customer {
+    background: #fff3e0;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 8px 0;
+}
+
+.label-preview .customer-title {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.label-preview .customer-name {
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.label-preview .customer-phone {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
 }
 
 .label-preview .label-footer {
-    margin-top: 20px;
+    margin-top: 8px;
+}
+
+.label-preview .footer-contact {
     font-size: 0.75rem;
     color: var(--text-secondary);
+}
+
+.label-preview .footer-love {
+    font-size: 0.7rem;
+    color: #e91e63;
+    margin-top: 4px;
 }
 
 /* ===== Settings ===== */
@@ -1836,12 +1902,37 @@ textarea.form-control {
     }
     
     .page-header {
-        flex-direction: column;
-        align-items: stretch;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+        margin-bottom: 15px;
     }
     
     .page-header h2 {
-        font-size: 1.5rem;
+        font-size: 1.4rem;
+        margin: 0;
+    }
+    
+    /* Mobile New Order Button - Styled nicely */
+    .page-header .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        border-radius: 25px;
+        box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+        white-space: nowrap;
+    }
+    
+    .page-header .btn .btn-text {
+        display: inline !important;
+    }
+    
+    .page-header .btn i {
+        font-size: 0.9rem;
     }
     
     .btn .btn-text {
@@ -2078,46 +2169,60 @@ textarea.form-control {
         grid-template-columns: 1fr;
     }
     
-    /* Mobile Modal Fixes */
+    /* Mobile Modal Fixes - Account for browser chrome */
     .modal {
-        padding: 10px;
+        padding: 60px 10px 80px 10px;
+        padding-top: calc(60px + env(safe-area-inset-top, 0px));
+        padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+        align-items: flex-start;
     }
     
     .modal-content {
-        margin: 0;
-        max-height: calc(100vh - 20px);
-        max-height: calc(100dvh - 20px);
+        margin: 0 auto;
+        max-height: none;
         width: 100%;
         max-width: 100%;
-        border-radius: 12px;
+        border-radius: 16px;
         display: flex;
         flex-direction: column;
+        box-shadow: 0 -5px 25px rgba(0,0,0,0.3);
     }
     
     .modal-header {
-        padding: 15px;
+        padding: 18px 15px;
         flex-shrink: 0;
         position: relative;
         z-index: 10;
+        background: var(--primary);
+        color: white;
+        border-radius: 16px 16px 0 0;
     }
     
     .modal-header h3 {
         font-size: 1rem;
         flex: 1;
-        padding-right: 40px;
+        padding-right: 45px;
+        color: white;
+    }
+    
+    .modal-header h3 i {
+        color: white;
     }
     
     .modal-close {
         position: absolute;
-        right: 15px;
+        right: 12px;
         top: 50%;
         transform: translateY(-50%);
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         font-size: 1.5rem;
-        background: var(--danger);
-        color: white;
+        background: white;
+        color: var(--danger);
         z-index: 20;
+        border: none;
+        border-radius: 50%;
+        font-weight: bold;
     }
     
     .modal-body {
@@ -2125,6 +2230,7 @@ textarea.form-control {
         flex: 1;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
+        max-height: 50vh;
     }
     
     .modal-footer {
@@ -2134,15 +2240,19 @@ textarea.form-control {
         z-index: 10;
         display: flex;
         gap: 10px;
-        flex-wrap: wrap;
+        background: #f5f5f5;
+        border-radius: 0 0 16px 16px;
+        border-top: 2px solid var(--border-color);
     }
     
     .modal-footer .btn {
         flex: 1;
         min-width: 100px;
-        padding: 12px 15px;
-        font-size: 0.9rem;
+        padding: 14px 15px;
+        font-size: 1rem;
+        font-weight: 600;
         justify-content: center;
+        border-radius: 10px;
     }
     
     .modal-footer .btn-secondary {
@@ -2151,28 +2261,14 @@ textarea.form-control {
         border: none;
     }
     
-    /* Page Header Button Fix */
-    .page-header {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 10px;
+    .modal-footer .btn-primary {
+        background: var(--success);
+        color: white;
     }
-    
-    .page-header .btn {
-        flex-shrink: 0;
-        white-space: nowrap;
-        padding: 10px 15px;
-    }
-    
-    .page-header .btn .btn-text {
-        display: inline;
-    }
-    
+
     /* Order Items List */
     .order-items-list {
-        max-height: 150px;
+        max-height: 120px;
     }
     
     /* Add Item Row Mobile */
@@ -2191,20 +2287,43 @@ textarea.form-control {
     
     /* Combo Selector Modal Mobile */
     #comboSelectorModal .modal-content {
-        max-height: 90vh;
-        max-height: 90dvh;
+        max-height: none;
     }
     
     #comboSelectorModal .modal-body {
         padding: 10px;
+        max-height: 45vh;
     }
     
     #comboSelectorModal .modal-footer {
-        padding: 10px 15px;
+        padding: 12px 15px;
     }
     
     #comboSelectorModal .modal-footer .btn {
-        padding: 12px 20px;
+        padding: 14px 20px;
+    }
+    
+    /* Form adjustments */
+    .order-form-grid {
+        gap: 10px;
+    }
+    
+    .add-item-box {
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .form-group {
+        margin-bottom: 12px;
+    }
+    
+    .form-control {
+        padding: 10px 12px;
+        font-size: 16px; /* Prevents iOS zoom */
+    }
+    
+    textarea.form-control {
+        min-height: 60px;
     }
 }
 

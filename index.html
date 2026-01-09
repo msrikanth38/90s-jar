@@ -287,20 +287,32 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Quantity/Weight</label>
-                            <input type="text" id="labelQuantity" class="form-control" placeholder="e.g., 250g">
+                            <label>Weight</label>
+                            <input type="text" id="labelWeight" class="form-control" placeholder="e.g., 250g">
                         </div>
                         <div class="form-group">
-                            <label>Custom Price ($)</label>
-                            <input type="number" id="labelPrice" class="form-control" step="0.01" placeholder="Optional">
+                            <label>Quantity</label>
+                            <input type="number" id="labelQuantity" class="form-control" min="1" value="1" placeholder="1">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Price ($)</label>
+                            <input type="number" id="labelPrice" class="form-control" step="0.01" placeholder="Auto from item">
+                        </div>
+                        <div class="form-group">
+                            <label>Expiry Date</label>
+                            <input type="date" id="labelExpiry" class="form-control">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Expiry Date</label>
-                        <input type="date" id="labelExpiry" class="form-control">
+                        <label>Customer (Optional)</label>
+                        <select id="labelCustomer" class="form-control">
+                            <option value="">-- No Customer --</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label>Offer Text</label>
+                        <label>Offer/Discount Text</label>
                         <input type="text" id="labelOffer" class="form-control" placeholder="e.g., 10% OFF">
                     </div>
                     <div class="form-actions">

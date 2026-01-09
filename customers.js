@@ -280,6 +280,7 @@ const History = {
 const Labels = {
     refresh() {
         this.populateItems();
+        this.loadLabelCustomers();
     },
 
     populateItems() {
@@ -294,10 +295,12 @@ const Labels = {
 
     generateLabel() {
         const itemId = document.getElementById('labelItem').value;
-        const quantity = document.getElementById('labelQuantity')?.value || '';
+        const weight = document.getElementById('labelWeight')?.value || '';
+        const quantity = document.getElementById('labelQuantity')?.value || '1';
         const customPrice = document.getElementById('labelPrice')?.value || '';
         const expiryDate = document.getElementById('labelExpiry')?.value || '';
         const offerText = document.getElementById('labelOffer')?.value.trim() || '';
+        const customerId = document.getElementById('labelCustomer')?.value || '';
 
         if (!itemId) {
             Toast.warning('Select Item', 'Please select an item');
@@ -308,31 +311,66 @@ const Labels = {
         if (!item) return;
 
         const price = customPrice || (item.selling_price || item.sellingPrice);
+        const customer = customerId ? DataStore.customers.find(c => c.id === customerId) : null;
 
         const labelHtml = `
             <div class="label-preview">
                 <div class="label-header">
-                    <h2>90's JAR</h2>
-                    <p>Homemade Sankranti Snacks</p>
+                    <div class="label-logo">90's JAR</div>
+                    <div class="label-tagline">Homemade Sankranti Snacks</div>
                 </div>
+                
+                <div class="label-divider"></div>
+                
                 <div class="label-product">
-                    <h3>${item.name}</h3>
-                    <p class="label-category">${item.category === 'pickles' ? '🥒 Homemade Pickle' : '🍪 Homemade Snack'}</p>
+                    <div class="product-name">${item.name}</div>
+                    <div class="product-category">${item.category === 'pickles' ? '🥒 Homemade Pickle' : '🍪 Homemade Snack'}</div>
                 </div>
-                ${quantity ? `<p class="label-qty">Net Qty: ${quantity}</p>` : ''}
-                <div class="label-price">
-                    <span class="price-tag">${Utils.formatCurrency(price)}</span>
-                    ${offerText ? `<span class="offer-tag">${offerText}</span>` : ''}
+                
+                <div class="label-details">
+                    <div class="detail-row">
+                        ${weight ? `<span class="detail-item"><strong>Wt:</strong> ${weight}</span>` : ''}
+                        <span class="detail-item"><strong>Qty:</strong> ${quantity}</span>
+                        <span class="detail-item detail-price"><strong>${Utils.formatCurrency(price)}</strong></span>
+                    </div>
                 </div>
-                ${expiryDate ? `<p class="label-expiry">Best Before: ${Utils.formatDate(expiryDate)}</p>` : ''}
+                
+                ${offerText ? `<div class="label-offer">${offerText}</div>` : ''}
+                
+                ${expiryDate ? `<div class="label-expiry"><strong>Best Before:</strong> ${Utils.formatDate(expiryDate)}</div>` : ''}
+                
+                ${customer ? `
+                <div class="label-divider"></div>
+                <div class="label-customer">
+                    <div class="customer-title">📦 Packed For:</div>
+                    <div class="customer-name">${customer.name}</div>
+                    ${customer.phone ? `<div class="customer-phone">📞 ${customer.phone}</div>` : ''}
+                </div>
+                ` : ''}
+                
+                <div class="label-divider"></div>
+                
                 <div class="label-footer">
-                    <p>📞 +1 6822742570</p>
-                    <p>Made with ❤️</p>
+                    <div class="footer-contact">📞 +1 6822742570</div>
+                    <div class="footer-love">Made with ❤️ in USA</div>
                 </div>
             </div>
         `;
 
         document.getElementById('labelOutput').innerHTML = labelHtml;
+    },
+
+    loadLabelCustomers() {
+        const select = document.getElementById('labelCustomer');
+        if (!select) return;
+        
+        select.innerHTML = '<option value="">-- No Customer --</option>';
+        DataStore.customers.forEach(customer => {
+            const option = document.createElement('option');
+            option.value = customer.id;
+            option.textContent = customer.name;
+            select.appendChild(option);
+        });
     },
 
     printLabel() {
@@ -346,23 +384,134 @@ const Labels = {
         printWindow.document.write(`
             <html>
             <head>
-                <title>Print Label</title>
+                <title>Print Label - 90's JAR</title>
                 <style>
-                    body { font-family: Arial, sans-serif; padding: 20px; }
-                    .label-preview { border: 2px dashed #333; padding: 20px; max-width: 300px; text-align: center; }
-                    .label-header h2 { margin: 0; color: #8B4513; }
-                    .label-header p { margin: 5px 0; font-size: 12px; }
-                    .label-product h3 { margin: 15px 0 5px; }
-                    .label-category { color: #666; font-size: 12px; }
-                    .label-qty { margin: 10px 0; }
-                    .label-price { margin: 15px 0; }
-                    .price-tag { font-size: 24px; font-weight: bold; color: #2E7D32; }
-                    .offer-tag { display: block; background: #FF5722; color: white; padding: 5px; margin-top: 10px; font-size: 12px; }
-                    .label-expiry { font-size: 11px; color: #666; }
-                    .label-footer { margin-top: 15px; font-size: 11px; }
+                    @page { size: 4in 3in; margin: 0.2in; }
+                    body { 
+                        font-family: 'Segoe UI', Arial, sans-serif; 
+                        padding: 0; 
+                        margin: 0;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                    }
+                    .label-preview { 
+                        border: 2px solid #8B4513; 
+                        border-radius: 12px;
+                        padding: 15px 20px; 
+                        max-width: 320px; 
+                        width: 100%;
+                        text-align: center;
+                        background: #fff;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    }
+                    .label-header { margin-bottom: 8px; }
+                    .label-logo { 
+                        font-size: 28px; 
+                        font-weight: bold; 
+                        color: #8B4513; 
+                        font-family: 'Georgia', serif;
+                        letter-spacing: 1px;
+                    }
+                    .label-tagline { 
+                        font-size: 11px; 
+                        color: #666; 
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    .label-divider {
+                        height: 1px;
+                        background: linear-gradient(to right, transparent, #ccc, transparent);
+                        margin: 10px 0;
+                    }
+                    .label-product { margin: 10px 0; }
+                    .product-name { 
+                        font-size: 20px; 
+                        font-weight: bold; 
+                        color: #333;
+                        margin-bottom: 4px;
+                    }
+                    .product-category { 
+                        font-size: 12px; 
+                        color: #666; 
+                    }
+                    .label-details {
+                        background: #f8f8f8;
+                        border-radius: 8px;
+                        padding: 10px;
+                        margin: 10px 0;
+                    }
+                    .detail-row {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        gap: 15px;
+                        flex-wrap: wrap;
+                    }
+                    .detail-item {
+                        font-size: 13px;
+                        color: #444;
+                    }
+                    .detail-price {
+                        font-size: 18px;
+                        color: #2E7D32;
+                    }
+                    .label-offer {
+                        background: #e74c3c;
+                        color: white;
+                        padding: 5px 12px;
+                        border-radius: 15px;
+                        font-size: 12px;
+                        font-weight: bold;
+                        display: inline-block;
+                        margin: 8px 0;
+                    }
+                    .label-expiry { 
+                        font-size: 11px; 
+                        color: #888;
+                        margin: 8px 0;
+                    }
+                    .label-customer {
+                        background: #fff3e0;
+                        border-radius: 8px;
+                        padding: 10px;
+                        margin: 8px 0;
+                    }
+                    .customer-title {
+                        font-size: 10px;
+                        color: #888;
+                        text-transform: uppercase;
+                        margin-bottom: 4px;
+                    }
+                    .customer-name {
+                        font-size: 14px;
+                        font-weight: bold;
+                        color: #333;
+                    }
+                    .customer-phone {
+                        font-size: 12px;
+                        color: #666;
+                    }
+                    .label-footer { 
+                        margin-top: 8px;
+                    }
+                    .footer-contact {
+                        font-size: 11px;
+                        color: #666;
+                    }
+                    .footer-love {
+                        font-size: 10px;
+                        color: #e91e63;
+                        margin-top: 4px;
+                    }
+                    @media print {
+                        body { min-height: auto; }
+                        .label-preview { box-shadow: none; border: 2px solid #8B4513; }
+                    }
                 </style>
             </head>
-            <body onload="window.print();window.close();">${labelContent}</body>
+            <body onload="window.print();">${labelContent}</body>
             </html>
         `);
     }
