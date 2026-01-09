@@ -598,6 +598,35 @@ def add_order():
     conn.close()
     return jsonify({'success': True, 'id': order_id, 'orderId': order_number})
 
+@app.route('/api/orders/<order_id>', methods=['PUT'])
+def update_order(order_id):
+    data = request.json
+    items_json = json.dumps(data.get('items', []))
+    now = datetime.now().isoformat()
+    conn, is_postgres = get_db()
+    cur = conn.cursor()
+    
+    if is_postgres:
+        cur.execute('''
+            UPDATE orders SET customer_name = %s, customer_phone = %s, customer_email = %s, customer_address = %s,
+            items = %s, subtotal = %s, discount = %s, total = %s, deadline = %s, notes = %s
+            WHERE id = %s
+        ''', (data['customerName'], data.get('customerPhone', ''), data.get('customerEmail', ''), data.get('customerAddress', ''),
+              items_json, data.get('subtotal', 0), data.get('discount', 0), data.get('total', 0),
+              data.get('deadline'), data.get('notes', ''), order_id))
+    else:
+        cur.execute('''
+            UPDATE orders SET customer_name = ?, customer_phone = ?, customer_email = ?, customer_address = ?,
+            items = ?, subtotal = ?, discount = ?, total = ?, deadline = ?, notes = ?
+            WHERE id = ?
+        ''', (data['customerName'], data.get('customerPhone', ''), data.get('customerEmail', ''), data.get('customerAddress', ''),
+              items_json, data.get('subtotal', 0), data.get('discount', 0), data.get('total', 0),
+              data.get('deadline'), data.get('notes', ''), order_id))
+    
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'id': order_id})
+
 @app.route('/api/orders/<order_id>/status', methods=['PUT'])
 def update_order_status(order_id):
     data = request.json
@@ -651,6 +680,11 @@ def get_order_history():
     for order in orders:
         order['items'] = json.loads(order['items']) if order['items'] else []
     return jsonify(orders)
+
+@app.route('/api/history/<history_id>', methods=['DELETE'])
+def delete_history(history_id):
+    execute_query('DELETE FROM order_history WHERE id = ?', (history_id,), commit=True)
+    return jsonify({'success': True})
 
 # ===== Combos API =====
 @app.route('/api/combos', methods=['GET'])

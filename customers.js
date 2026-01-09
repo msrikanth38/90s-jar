@@ -265,14 +265,196 @@ const History = {
 
         container.innerHTML = orders.map(order => `
             <tr data-id="${order.id}">
-                <td>${order.order_id || order.orderId}</td>
-                <td>${order.customer_name || order.customerName}</td>
-                <td>${(order.items || []).map(i => `${i.name} × ${i.quantity}`).join(', ')}</td>
-                <td>${Utils.formatCurrency(order.total)}</td>
+                <td><strong>${order.order_id || order.orderId}</strong></td>
+                <td>
+                    <div class="customer-cell">
+                        <span class="customer-name">${order.customer_name || order.customerName}</span>
+                        <span class="customer-phone">${order.customer_phone || order.customerPhone || ''}</span>
+                    </div>
+                </td>
+                <td class="items-cell">${(order.items || []).map(i => `<span class="item-badge">${i.name} × ${i.quantity}</span>`).join(' ')}</td>
+                <td><strong class="total-amount">${Utils.formatCurrency(order.total)}</strong></td>
                 <td>${Utils.formatDateTime(order.delivered_at || order.deliveredAt)}</td>
-                <td><span class="status-badge delivered"><i class="fas fa-check"></i> Delivered</span></td>
+                <td class="history-actions">
+                    <button class="btn-icon" onclick="History.viewLabels('${order.id}')" title="View Labels"><i class="fas fa-tag"></i></button>
+                    <button class="btn-icon" onclick="History.viewDetails('${order.id}')" title="View Details"><i class="fas fa-eye"></i></button>
+                    <button class="btn-icon danger" onclick="History.deleteRecord('${order.id}')" title="Delete"><i class="fas fa-trash"></i></button>
+                </td>
             </tr>
         `).join('');
+    },
+
+    viewDetails(orderId) {
+        const order = DataStore.orderHistory.find(o => o.id === orderId);
+        if (!order) return;
+
+        const itemsHtml = (order.items || []).map(item => `
+            <div class="history-item">
+                <span class="item-name">${item.isCombo ? '📦 ' : ''}${item.name}</span>
+                <span class="item-qty">${item.quantity} × ${Utils.formatCurrency(item.price)}</span>
+                <span class="item-total">${Utils.formatCurrency(item.total || item.price * item.quantity)}</span>
+            </div>
+        `).join('');
+
+        const modalHtml = `
+            <div id="historyDetailModal" class="modal active">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-receipt"></i> Order ${order.order_id || order.orderId}</h3>
+                        <button class="modal-close" onclick="History.closeModal()">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="history-detail-grid">
+                            <div class="detail-section">
+                                <h4>Customer</h4>
+                                <p><strong>${order.customer_name || order.customerName}</strong></p>
+                                <p>📞 ${order.customer_phone || order.customerPhone || 'N/A'}</p>
+                                <p>📧 ${order.customer_email || order.customerEmail || 'N/A'}</p>
+                                <p>📍 ${order.customer_address || order.customerAddress || 'N/A'}</p>
+                            </div>
+                            <div class="detail-section">
+                                <h4>Order Info</h4>
+                                <p><strong>Delivered:</strong> ${Utils.formatDateTime(order.delivered_at || order.deliveredAt)}</p>
+                                <p><strong>Notes:</strong> ${order.notes || 'None'}</p>
+                            </div>
+                        </div>
+                        <h4>Items</h4>
+                        <div class="history-items-list">${itemsHtml}</div>
+                        <div class="history-totals">
+                            <div class="total-row"><span>Subtotal:</span><span>${Utils.formatCurrency(order.subtotal || order.total)}</span></div>
+                            <div class="total-row"><span>Discount:</span><span>-${Utils.formatCurrency(order.discount || 0)}</span></div>
+                            <div class="total-row grand"><span>Total:</span><span>${Utils.formatCurrency(order.total)}</span></div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="History.closeModal()">Close</button>
+                        <button class="btn btn-primary" onclick="History.viewLabels('${order.id}')">
+                            <i class="fas fa-tag"></i> Print Labels
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('historyDetailModal')?.remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    },
+
+    viewLabels(orderId) {
+        const order = DataStore.orderHistory.find(o => o.id === orderId);
+        if (!order) return;
+
+        const customer = {
+            name: order.customer_name || order.customerName,
+            phone: order.customer_phone || order.customerPhone
+        };
+
+        // Generate labels for all items
+        const labelsHtml = (order.items || []).map(item => {
+            if (item.isCombo && item.comboItems) {
+                return item.comboItems.map(comboItem => {
+                    const invItem = DataStore.inventory.find(i => i.id === comboItem.itemId);
+                    const category = invItem?.category === 'pickles' ? '🥒 Homemade Pickle' : '🍪 Homemade Snack';
+                    return this.createLabelHtml(comboItem.name, category, item.price / item.comboItems.length, 1, customer, order.delivered_at || order.deliveredAt);
+                }).join('');
+            } else {
+                const invItem = DataStore.inventory.find(i => i.id === item.itemId);
+                const category = invItem?.category === 'pickles' ? '🥒 Homemade Pickle' : '🍪 Homemade Snack';
+                return this.createLabelHtml(item.name, category, item.price, item.quantity, customer, order.delivered_at || order.deliveredAt);
+            }
+        }).join('');
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Labels - ${order.order_id || order.orderId}</title>
+                <style>
+                    @page { size: 4in 3in; margin: 0.2in; }
+                    body { font-family: 'Segoe UI', Arial, sans-serif; padding: 10px; margin: 0; }
+                    .labels-grid { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
+                    .label-preview { 
+                        border: 2px solid #8B4513; border-radius: 12px; padding: 15px; 
+                        width: 280px; text-align: center; background: #fff; page-break-inside: avoid;
+                    }
+                    .label-logo { font-size: 22px; font-weight: bold; color: #8B4513; font-family: Georgia, serif; }
+                    .label-tagline { font-size: 10px; color: #666; text-transform: uppercase; }
+                    .label-divider { height: 1px; background: linear-gradient(to right, transparent, #ccc, transparent); margin: 8px 0; }
+                    .product-name { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 4px; }
+                    .product-category { font-size: 11px; color: #666; }
+                    .label-details { background: #f8f8f8; border-radius: 8px; padding: 8px; margin: 8px 0; }
+                    .detail-row { display: flex; justify-content: center; align-items: center; gap: 10px; }
+                    .detail-price { font-size: 16px; color: #2E7D32; font-weight: bold; }
+                    .label-customer { background: #fff3e0; border-radius: 8px; padding: 8px; margin: 6px 0; }
+                    .customer-title { font-size: 9px; color: #888; text-transform: uppercase; }
+                    .customer-name { font-size: 12px; font-weight: bold; }
+                    .customer-phone { font-size: 11px; color: #666; }
+                    .label-date { font-size: 10px; color: #888; margin-top: 4px; }
+                    .footer-contact { font-size: 10px; color: #666; }
+                    .footer-love { font-size: 9px; color: #e91e63; }
+                    @media print { .label-preview { box-shadow: none; } }
+                </style>
+            </head>
+            <body>
+                <div class="labels-grid">${labelsHtml}</div>
+                <script>setTimeout(() => window.print(), 500);</script>
+            </body>
+            </html>
+        `);
+    },
+
+    createLabelHtml(name, category, price, qty, customer, deliveredDate) {
+        return `
+            <div class="label-preview">
+                <div class="label-header">
+                    <div class="label-logo">90's JAR</div>
+                    <div class="label-tagline">Homemade Sankranti Snacks</div>
+                </div>
+                <div class="label-divider"></div>
+                <div class="label-product">
+                    <div class="product-name">${name}</div>
+                    <div class="product-category">${category}</div>
+                </div>
+                <div class="label-details">
+                    <div class="detail-row">
+                        <span><strong>Qty:</strong> ${qty}</span>
+                        <span class="detail-price"><strong>${Utils.formatCurrency(price)}</strong></span>
+                    </div>
+                </div>
+                ${customer ? `
+                <div class="label-divider"></div>
+                <div class="label-customer">
+                    <div class="customer-title">📦 Packed For:</div>
+                    <div class="customer-name">${customer.name}</div>
+                    ${customer.phone ? `<div class="customer-phone">📞 ${customer.phone}</div>` : ''}
+                </div>
+                ` : ''}
+                <div class="label-divider"></div>
+                <div class="label-footer">
+                    <div class="footer-contact">📞 +1 6822742570</div>
+                    <div class="footer-love">Made with ❤️ in USA</div>
+                    ${deliveredDate ? `<div class="label-date">Delivered: ${Utils.formatDate(deliveredDate)}</div>` : ''}
+                </div>
+            </div>
+        `;
+    },
+
+    async deleteRecord(orderId) {
+        if (!confirm('Are you sure you want to delete this history record?')) return;
+
+        const result = await API.deleteHistory(orderId);
+        
+        if (result.success) {
+            Toast.success('Deleted', 'History record has been removed');
+            await DataStore.loadAll();
+            this.refresh();
+        } else {
+            Toast.error('Error', 'Failed to delete record');
+        }
+    },
+
+    closeModal() {
+        document.getElementById('historyDetailModal')?.remove();
     }
 };
 
@@ -284,17 +466,51 @@ const Labels = {
     },
 
     populateItems() {
-        const select = document.getElementById('labelItem');
-        if (!select) return;
+        const container = document.getElementById('labelItemsCheckboxes');
+        if (!container) return;
 
-        select.innerHTML = '<option value="">Select an item...</option>';
-        DataStore.inventory.forEach(item => {
-            select.innerHTML += `<option value="${item.id}">${item.name} - ${Utils.formatCurrency(item.selling_price || item.sellingPrice)}</option>`;
-        });
+        const pickles = DataStore.inventory.filter(i => i.category === 'pickles');
+        const snacks = DataStore.inventory.filter(i => i.category === 'snacks');
+        
+        let html = '';
+        
+        if (pickles.length > 0) {
+            html += `<div class="label-category-group"><div class="category-title">🥒 Pickles</div>`;
+            pickles.forEach(item => {
+                html += `
+                    <label class="label-item-checkbox">
+                        <input type="checkbox" name="labelItemCheck" value="${item.id}" 
+                            data-name="${item.name}" 
+                            data-price="${item.selling_price || item.sellingPrice}"
+                            data-category="${item.category}">
+                        <span class="checkbox-label">${item.name} - ${Utils.formatCurrency(item.selling_price || item.sellingPrice)}</span>
+                    </label>
+                `;
+            });
+            html += `</div>`;
+        }
+        
+        if (snacks.length > 0) {
+            html += `<div class="label-category-group"><div class="category-title">🍪 Snacks</div>`;
+            snacks.forEach(item => {
+                html += `
+                    <label class="label-item-checkbox">
+                        <input type="checkbox" name="labelItemCheck" value="${item.id}" 
+                            data-name="${item.name}" 
+                            data-price="${item.selling_price || item.sellingPrice}"
+                            data-category="${item.category}">
+                        <span class="checkbox-label">${item.name} - ${Utils.formatCurrency(item.selling_price || item.sellingPrice)}</span>
+                    </label>
+                `;
+            });
+            html += `</div>`;
+        }
+        
+        container.innerHTML = html || '<p>No items available</p>';
     },
 
     generateLabel() {
-        const itemId = document.getElementById('labelItem').value;
+        const checkedItems = document.querySelectorAll('input[name="labelItemCheck"]:checked');
         const weight = document.getElementById('labelWeight')?.value || '';
         const quantity = document.getElementById('labelQuantity')?.value || '1';
         const customPrice = document.getElementById('labelPrice')?.value || '';
@@ -302,62 +518,67 @@ const Labels = {
         const offerText = document.getElementById('labelOffer')?.value.trim() || '';
         const customerId = document.getElementById('labelCustomer')?.value || '';
 
-        if (!itemId) {
-            Toast.warning('Select Item', 'Please select an item');
+        if (checkedItems.length === 0) {
+            Toast.warning('Select Items', 'Please select at least one item');
             return;
         }
 
-        const item = DataStore.inventory.find(i => i.id === itemId);
-        if (!item) return;
-
-        const price = customPrice || (item.selling_price || item.sellingPrice);
         const customer = customerId ? DataStore.customers.find(c => c.id === customerId) : null;
 
-        const labelHtml = `
-            <div class="label-preview">
-                <div class="label-header">
-                    <div class="label-logo">90's JAR</div>
-                    <div class="label-tagline">Homemade Sankranti Snacks</div>
-                </div>
-                
-                <div class="label-divider"></div>
-                
-                <div class="label-product">
-                    <div class="product-name">${item.name}</div>
-                    <div class="product-category">${item.category === 'pickles' ? '🥒 Homemade Pickle' : '🍪 Homemade Snack'}</div>
-                </div>
-                
-                <div class="label-details">
-                    <div class="detail-row">
-                        ${weight ? `<span class="detail-item"><strong>Wt:</strong> ${weight}</span>` : ''}
-                        <span class="detail-item"><strong>Qty:</strong> ${quantity}</span>
-                        <span class="detail-item detail-price"><strong>${Utils.formatCurrency(price)}</strong></span>
+        // Generate labels for all selected items
+        let labelsHtml = '';
+        
+        checkedItems.forEach(cb => {
+            const itemName = cb.dataset.name;
+            const itemPrice = customPrice || cb.dataset.price;
+            const itemCategory = cb.dataset.category === 'pickles' ? '🥒 Homemade Pickle' : '🍪 Homemade Snack';
+            
+            labelsHtml += `
+                <div class="label-preview">
+                    <div class="label-header">
+                        <div class="label-logo">90's JAR</div>
+                        <div class="label-tagline">Homemade Sankranti Snacks</div>
+                    </div>
+                    
+                    <div class="label-divider"></div>
+                    
+                    <div class="label-product">
+                        <div class="product-name">${itemName}</div>
+                        <div class="product-category">${itemCategory}</div>
+                    </div>
+                    
+                    <div class="label-details">
+                        <div class="detail-row">
+                            ${weight ? `<span class="detail-item"><strong>Wt:</strong> ${weight}</span>` : ''}
+                            <span class="detail-item"><strong>Qty:</strong> ${quantity}</span>
+                            <span class="detail-item detail-price"><strong>${Utils.formatCurrency(itemPrice)}</strong></span>
+                        </div>
+                    </div>
+                    
+                    ${offerText ? `<div class="label-offer">${offerText}</div>` : ''}
+                    
+                    ${expiryDate ? `<div class="label-expiry"><strong>Best Before:</strong> ${Utils.formatDate(expiryDate)}</div>` : ''}
+                    
+                    ${customer ? `
+                    <div class="label-divider"></div>
+                    <div class="label-customer">
+                        <div class="customer-title">📦 Packed For:</div>
+                        <div class="customer-name">${customer.name}</div>
+                        ${customer.phone ? `<div class="customer-phone">📞 ${customer.phone}</div>` : ''}
+                    </div>
+                    ` : ''}
+                    
+                    <div class="label-divider"></div>
+                    
+                    <div class="label-footer">
+                        <div class="footer-contact">📞 +1 6822742570</div>
+                        <div class="footer-love">Made with ❤️ in USA</div>
                     </div>
                 </div>
-                
-                ${offerText ? `<div class="label-offer">${offerText}</div>` : ''}
-                
-                ${expiryDate ? `<div class="label-expiry"><strong>Best Before:</strong> ${Utils.formatDate(expiryDate)}</div>` : ''}
-                
-                ${customer ? `
-                <div class="label-divider"></div>
-                <div class="label-customer">
-                    <div class="customer-title">📦 Packed For:</div>
-                    <div class="customer-name">${customer.name}</div>
-                    ${customer.phone ? `<div class="customer-phone">📞 ${customer.phone}</div>` : ''}
-                </div>
-                ` : ''}
-                
-                <div class="label-divider"></div>
-                
-                <div class="label-footer">
-                    <div class="footer-contact">📞 +1 6822742570</div>
-                    <div class="footer-love">Made with ❤️ in USA</div>
-                </div>
-            </div>
-        `;
+            `;
+        });
 
-        document.getElementById('labelOutput').innerHTML = labelHtml;
+        document.getElementById('labelOutput').innerHTML = `<div class="labels-multi-preview">${labelsHtml}</div>`;
     },
 
     loadLabelCustomers() {

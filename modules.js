@@ -85,17 +85,41 @@ const Dashboard = {
     updateStats() {
         const today = new Date().toDateString();
         
+        // Count today's orders from both active orders and history
         const todayOrders = DataStore.orders.filter(o => 
             new Date(o.created_at || o.createdAt).toDateString() === today
         );
-        document.getElementById('todayOrders').textContent = todayOrders.length;
+        
+        const todayDelivered = DataStore.orderHistory.filter(o => {
+            const deliveredDate = o.delivered_at || o.deliveredAt;
+            const createdDate = o.created_at || o.createdAt;
+            return (deliveredDate && new Date(deliveredDate).toDateString() === today) ||
+                   (createdDate && new Date(createdDate).toDateString() === today);
+        });
+        
+        document.getElementById('todayOrders').textContent = todayOrders.length + todayDelivered.length;
 
         const pendingOrders = DataStore.orders.filter(o => o.status !== 'delivered');
         document.getElementById('pendingOrders').textContent = pendingOrders.length;
         document.getElementById('pendingOrdersBadge').textContent = pendingOrders.length;
 
-        const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+        // Today's revenue includes active orders and delivered orders today
+        const activeRevenue = todayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+        const deliveredRevenue = todayDelivered.reduce((sum, o) => sum + (o.total || 0), 0);
+        const todayRevenue = activeRevenue + deliveredRevenue;
         document.getElementById('todayRevenue').textContent = Utils.formatCurrency(todayRevenue);
+
+        // Today's expenses from transactions
+        const todayExpenses = DataStore.transactions
+            .filter(t => t.type === 'expense' && new Date(t.date).toDateString() === today)
+            .reduce((sum, t) => sum + (t.amount || 0), 0);
+        document.getElementById('todayExpenses').textContent = Utils.formatCurrency(todayExpenses);
+
+        // Today's profit
+        const todayProfit = todayRevenue - todayExpenses;
+        const profitEl = document.getElementById('todayProfit');
+        profitEl.textContent = Utils.formatCurrency(todayProfit);
+        profitEl.className = `stat-value ${todayProfit >= 0 ? 'profit-positive' : 'profit-negative'}`;
 
         const lowStock = DataStore.inventory.filter(i => 
             i.stock <= DataStore.settings.lowStockThreshold

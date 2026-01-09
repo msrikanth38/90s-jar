@@ -116,10 +116,24 @@
                     </div>
                 </div>
                 <div class="stat-card revenue">
-                    <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                    <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
                     <div class="stat-info">
                         <span class="stat-value" id="todayRevenue">$0.00</span>
-                        <span class="stat-label">Today's Revenue</span>
+                        <span class="stat-label">Today's Income</span>
+                    </div>
+                </div>
+                <div class="stat-card expense">
+                    <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="todayExpenses">$0.00</span>
+                        <span class="stat-label">Today's Expenses</span>
+                    </div>
+                </div>
+                <div class="stat-card profit">
+                    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="todayProfit">$0.00</span>
+                        <span class="stat-label">Today's Profit</span>
                     </div>
                 </div>
                 <div class="stat-card stock">
@@ -248,6 +262,13 @@
                         <span class="finance-value" id="totalExpenses">$0.00</span>
                     </div>
                 </div>
+                <div class="finance-card grocery">
+                    <i class="fas fa-shopping-basket"></i>
+                    <div class="finance-info">
+                        <span class="finance-label">Grocery Expenses</span>
+                        <span class="finance-value" id="groceryExpenses">$0.00</span>
+                    </div>
+                </div>
                 <div class="finance-card profit">
                     <i class="fas fa-chart-line"></i>
                     <div class="finance-info">
@@ -255,6 +276,42 @@
                         <span class="finance-value" id="netProfit">$0.00</span>
                     </div>
                 </div>
+            </div>
+
+            <!-- Partner Summary -->
+            <div class="partner-summary">
+                <h3><i class="fas fa-users"></i> Partner Purchases</h3>
+                <div class="partner-cards">
+                    <div class="partner-card">
+                        <div class="partner-avatar jaya">J</div>
+                        <div class="partner-info">
+                            <span class="partner-name">Jaya</span>
+                            <span class="partner-amount" id="jayaTotal">$0.00</span>
+                        </div>
+                    </div>
+                    <div class="partner-card">
+                        <div class="partner-avatar amani">A</div>
+                        <div class="partner-info">
+                            <span class="partner-name">Amani</span>
+                            <span class="partner-amount" id="amaniTotal">$0.00</span>
+                        </div>
+                    </div>
+                    <div class="partner-card">
+                        <div class="partner-avatar viji">V</div>
+                        <div class="partner-info">
+                            <span class="partner-name">Viji</span>
+                            <span class="partner-amount" id="vijiTotal">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div class="finance-filters">
+                <button class="filter-btn active" onclick="Finance.filterTransactions('all')">All</button>
+                <button class="filter-btn" onclick="Finance.filterTransactions('expense')">Expenses</button>
+                <button class="filter-btn" onclick="Finance.filterTransactions('income')">Income</button>
+                <button class="filter-btn" onclick="Finance.filterTransactions('grocery')">Grocery</button>
             </div>
 
             <div class="table-responsive">
@@ -265,7 +322,9 @@
                             <th>Type</th>
                             <th>Category</th>
                             <th>Amount</th>
+                            <th>Purchased By</th>
                             <th>Description</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="transactionsTable"></tbody>
@@ -280,24 +339,24 @@
             </div>
             <div class="labels-container">
                 <div class="label-form">
-                    <h3>Generate Label</h3>
+                    <h3>Generate Labels</h3>
                     <div class="form-group">
-                        <label>Select Item</label>
-                        <select id="labelItem" class="form-control"></select>
+                        <label>Select Items (multiple)</label>
+                        <div id="labelItemsCheckboxes" class="label-items-grid"></div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Weight</label>
+                            <label>Weight (all items)</label>
                             <input type="text" id="labelWeight" class="form-control" placeholder="e.g., 250g">
                         </div>
                         <div class="form-group">
-                            <label>Quantity</label>
+                            <label>Quantity Each</label>
                             <input type="number" id="labelQuantity" class="form-control" min="1" value="1" placeholder="1">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Price ($)</label>
+                            <label>Price (override)</label>
                             <input type="number" id="labelPrice" class="form-control" step="0.01" placeholder="Auto from item">
                         </div>
                         <div class="form-group">
@@ -350,7 +409,7 @@
                             <th>Items</th>
                             <th>Total</th>
                             <th>Delivered</th>
-                            <th>Status</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="historyTable"></tbody>
@@ -426,10 +485,11 @@
     <div id="orderModal" class="modal">
         <div class="modal-content modal-large">
             <div class="modal-header">
-                <h3><i class="fas fa-shopping-cart"></i> New Order</h3>
+                <h3><i class="fas fa-shopping-cart"></i> <span id="orderModalTitle">New Order</span></h3>
                 <button class="modal-close">&times;</button>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="editingOrderId" value="">
                 <div class="order-form-grid">
                     <div class="order-customer-section">
                         <h4>Customer Details</h4>
@@ -531,8 +591,8 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary modal-cancel">Cancel</button>
-                <button class="btn btn-primary" onclick="Orders.saveOrder()">
-                    <i class="fas fa-check"></i> Create Order
+                <button class="btn btn-primary" id="orderSaveBtn" onclick="Orders.saveOrder()">
+                    <i class="fas fa-check"></i> <span id="orderSaveBtnText">Create Order</span>
                 </button>
             </div>
         </div>
@@ -550,6 +610,21 @@
                     <p><strong>Order ID:</strong> <span id="viewOrderId"></span></p>
                     <p><strong>Customer:</strong> <span id="viewOrderCustomer"></span></p>
                     <p><strong>Phone:</strong> <span id="viewOrderPhone"></span></p>
+                    <p><strong>Email:</strong> <span id="viewOrderEmail">N/A</span></p>
+                    <p><strong>Address:</strong> <span id="viewOrderAddress">N/A</span></p>
+                    <p><strong>Deadline:</strong> <span id="viewOrderDeadline">N/A</span></p>
+                    <p><strong>Notes:</strong> <span id="viewOrderNotes">N/A</span></p>
+                </div>
+                <div class="order-status-section">
+                    <label><strong>Status:</strong></label>
+                    <select id="viewOrderStatus" class="form-control status-select" onchange="Orders.changeStatus()">
+                        <option value="pending">⏳ Pending</option>
+                        <option value="processing">🔄 Processing</option>
+                        <option value="ready">✅ Ready</option>
+                        <option value="delivered">🚚 Delivered</option>
+                        <option value="completed">✔️ Completed</option>
+                        <option value="cancelled">❌ Cancelled</option>
+                    </select>
                 </div>
                 <h4>Items</h4>
                 <div id="viewOrderItems" class="view-items-list"></div>
@@ -557,8 +632,14 @@
                     <strong>Total: <span id="viewOrderTotal"></span></strong>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer view-order-footer">
                 <button class="btn btn-secondary modal-cancel">Close</button>
+                <button class="btn btn-info" onclick="Orders.generateLabelsFromOrder()">
+                    <i class="fas fa-tag"></i> Print Labels
+                </button>
+                <button class="btn btn-warning" onclick="Orders.editOrder()">
+                    <i class="fas fa-edit"></i> Edit Order
+                </button>
             </div>
         </div>
     </div>
@@ -831,7 +912,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Type</label>
-                        <select id="transType" class="form-control">
+                        <select id="transType" class="form-control" onchange="Finance.onTypeChange()">
                             <option value="expense">Expense</option>
                             <option value="income">Income</option>
                         </select>
@@ -839,14 +920,16 @@
                     <div class="form-group">
                         <label>Category</label>
                         <select id="transCategory" class="form-control">
-                            <option value="ingredients">Ingredients</option>
-                            <option value="packaging">Packaging</option>
-                            <option value="utilities">Utilities</option>
-                            <option value="equipment">Equipment</option>
-                            <option value="marketing">Marketing</option>
-                            <option value="delivery">Delivery</option>
-                            <option value="sales">Sales</option>
-                            <option value="other">Other</option>
+                            <option value="grocery">🛒 Grocery</option>
+                            <option value="ingredients">🥜 Ingredients</option>
+                            <option value="packaging">📦 Packaging</option>
+                            <option value="utilities">💡 Utilities</option>
+                            <option value="equipment">🛠️ Equipment</option>
+                            <option value="marketing">📰 Marketing</option>
+                            <option value="delivery">🚚 Delivery</option>
+                            <option value="rent">🏠 Rent</option>
+                            <option value="sales">💰 Sales</option>
+                            <option value="other">📝 Other</option>
                         </select>
                     </div>
                 </div>
@@ -860,9 +943,19 @@
                         <input type="date" id="transDate" class="form-control">
                     </div>
                 </div>
+                <div class="form-group" id="purchasedByGroup">
+                    <label>Purchased By</label>
+                    <select id="transPurchasedBy" class="form-control">
+                        <option value="">-- Select Partner --</option>
+                        <option value="Jaya">👩 Jaya</option>
+                        <option value="Amani">👩 Amani</option>
+                        <option value="Viji">👩 Viji</option>
+                        <option value="Business">🏢 Business Account</option>
+                    </select>
+                </div>
                 <div class="form-group">
                     <label>Description</label>
-                    <textarea id="transDescription" class="form-control" rows="2" placeholder="Transaction description"></textarea>
+                    <textarea id="transDescription" class="form-control" rows="2" placeholder="What was purchased? (e.g., Rice 10kg, Oil 5L)"></textarea>
                 </div>
             </div>
             <div class="modal-footer">

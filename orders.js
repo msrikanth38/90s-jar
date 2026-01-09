@@ -1,6 +1,8 @@
 // ===== Orders Module =====
 const Orders = {
     currentOrder: { items: [], subtotal: 0, discount: 0, total: 0 },
+    editingOrderId: null,
+    viewingOrderId: null,
 
     refresh() {
         this.renderOrders();
@@ -24,8 +26,16 @@ const Orders = {
         }
 
         container.innerHTML = orders.map(order => {
-            const statusClass = order.status === 'pending' ? 'pending' : order.status === 'processing' ? 'processing' : order.status === 'ready' ? 'ready' : 'delivered';
-            const statusIcon = order.status === 'pending' ? 'clock' : order.status === 'processing' ? 'spinner' : order.status === 'ready' ? 'check' : 'truck';
+            const statusClass = order.status || 'pending';
+            const statusIcons = {
+                'pending': 'clock',
+                'processing': 'spinner',
+                'ready': 'check',
+                'delivered': 'truck',
+                'completed': 'check-circle',
+                'cancelled': 'times-circle'
+            };
+            const statusIcon = statusIcons[order.status] || 'clock';
             
             // Build item tags with combo details
             const itemTags = (order.items || []).slice(0, 3).map(item => {
@@ -36,7 +46,7 @@ const Orders = {
             }).join('');
             
             return `
-                <div class="order-card" data-id="${order.id}">
+                <div class="order-card ${statusClass}" data-id="${order.id}">
                     <div class="order-header">
                         <span class="order-id">${order.order_id || order.orderId}</span>
                         <span class="order-status ${statusClass}"><i class="fas fa-${statusIcon}"></i> ${order.status}</span>
@@ -57,8 +67,8 @@ const Orders = {
                         ${order.deadline ? `<span class="order-deadline"><i class="fas fa-calendar"></i> ${Utils.formatDate(order.deadline)}</span>` : ''}
                     </div>
                     <div class="order-actions">
-                        <button class="btn-icon" onclick="Orders.updateStatus('${order.id}')" title="Update Status"><i class="fas fa-sync-alt"></i></button>
                         <button class="btn-icon" onclick="Orders.viewOrder('${order.id}')" title="View Details"><i class="fas fa-eye"></i></button>
+                        <button class="btn-icon" onclick="Orders.editOrder('${order.id}')" title="Edit Order"><i class="fas fa-edit"></i></button>
                         <button class="btn-icon danger" onclick="Orders.deleteOrder('${order.id}')" title="Delete"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
@@ -351,22 +361,39 @@ const Orders = {
             status: 'pending'
         };
 
-        const result = await API.saveOrder(order);
+        let result;
+        if (this.editingOrderId) {
+            // Update existing order
+            order.id = this.editingOrderId;
+            result = await API.updateOrder(order);
+            if (result.success) {
+                Toast.success('Order Updated', `Order has been updated`);
+            }
+        } else {
+            // Create new order
+            result = await API.saveOrder(order);
+            if (result.success) {
+                Toast.success('Order Created', `Order ${result.orderId} has been created`);
+            }
+        }
         
         if (result.success) {
-            Toast.success('Order Created', `Order ${result.orderId} has been created`);
             await DataStore.loadAll();
             this.clearOrderForm();
             Modal.close('orderModal');
             this.refresh();
             Dashboard.refresh();
         } else {
-            Toast.error('Error', 'Failed to create order');
+            Toast.error('Error', 'Failed to save order');
         }
     },
 
     clearOrderForm() {
         this.currentOrder = { items: [], subtotal: 0, discount: 0, total: 0 };
+        this.editingOrderId = null;
+        document.getElementById('editingOrderId').value = '';
+        document.getElementById('orderModalTitle').textContent = 'New Order';
+        document.getElementById('orderSaveBtnText').textContent = 'Create Order';
         document.getElementById('orderCustomerName').value = '';
         document.getElementById('orderCustomerPhone').value = '';
         if (document.getElementById('orderCustomerEmail')) document.getElementById('orderCustomerEmail').value = '';
@@ -375,6 +402,49 @@ const Orders = {
         if (document.getElementById('orderNotes')) document.getElementById('orderNotes').value = '';
         if (document.getElementById('orderDiscountInput')) document.getElementById('orderDiscountInput').value = '0';
         this.updateOrderSummary();
+    },
+
+    editOrder(orderId) {
+        // If called from view modal without orderId, use the viewing order
+        if (!orderId && this.viewingOrderId) {
+            orderId = this.viewingOrderId;
+        }
+        
+        const order = DataStore.orders.find(o => o.id === orderId);
+        if (!order) return;
+
+        // Close view modal if open
+        Modal.close('viewOrderModal');
+
+        // Set editing mode
+        this.editingOrderId = orderId;
+        document.getElementById('editingOrderId').value = orderId;
+        document.getElementById('orderModalTitle').textContent = 'Edit Order - ' + (order.order_id || order.orderId);
+        document.getElementById('orderSaveBtnText').textContent = 'Update Order';
+
+        // Fill customer details
+        document.getElementById('orderCustomerName').value = order.customer_name || order.customerName || '';
+        document.getElementById('orderCustomerPhone').value = order.customer_phone || order.customerPhone || '';
+        if (document.getElementById('orderCustomerEmail')) {
+            document.getElementById('orderCustomerEmail').value = order.customer_email || order.customerEmail || '';
+        }
+        if (document.getElementById('orderCustomerAddress')) {
+            document.getElementById('orderCustomerAddress').value = order.customer_address || order.customerAddress || '';
+        }
+        document.getElementById('orderDeadline').value = order.deadline || '';
+        if (document.getElementById('orderNotes')) {
+            document.getElementById('orderNotes').value = order.notes || '';
+        }
+
+        // Load items
+        this.currentOrder.items = JSON.parse(JSON.stringify(order.items || []));
+        this.currentOrder.discount = order.discount || 0;
+        if (document.getElementById('orderDiscountInput')) {
+            document.getElementById('orderDiscountInput').value = order.discount || 0;
+        }
+
+        this.updateOrderSummary();
+        Modal.open('orderModal');
     },
 
     async updateStatus(orderId) {
@@ -398,9 +468,25 @@ const Orders = {
         }
     },
 
+    async changeStatus() {
+        const newStatus = document.getElementById('viewOrderStatus').value;
+        if (!this.viewingOrderId) return;
+
+        const result = await API.updateOrderStatus(this.viewingOrderId, newStatus);
+        
+        if (result.success) {
+            Toast.success('Status Updated', `Order status changed to ${newStatus}`);
+            await DataStore.loadAll();
+            this.refresh();
+            Dashboard.refresh();
+        }
+    },
+
     viewOrder(orderId) {
         const order = DataStore.orders.find(o => o.id === orderId);
         if (!order) return;
+
+        this.viewingOrderId = orderId;
 
         const modal = document.getElementById('viewOrderModal');
         if (!modal) return;
@@ -408,6 +494,12 @@ const Orders = {
         document.getElementById('viewOrderId').textContent = order.order_id || order.orderId;
         document.getElementById('viewOrderCustomer').textContent = order.customer_name || order.customerName;
         document.getElementById('viewOrderPhone').textContent = order.customer_phone || order.customerPhone || 'N/A';
+        document.getElementById('viewOrderEmail').textContent = order.customer_email || order.customerEmail || 'N/A';
+        document.getElementById('viewOrderAddress').textContent = order.customer_address || order.customerAddress || 'N/A';
+        document.getElementById('viewOrderDeadline').textContent = order.deadline ? Utils.formatDate(order.deadline) : 'N/A';
+        document.getElementById('viewOrderNotes').textContent = order.notes || 'N/A';
+        document.getElementById('viewOrderStatus').value = order.status || 'pending';
+        
         document.getElementById('viewOrderItems').innerHTML = (order.items || []).map(item => {
             let comboLine = '';
             if (item.isCombo && item.comboDescription) {
@@ -424,6 +516,121 @@ const Orders = {
         document.getElementById('viewOrderTotal').textContent = Utils.formatCurrency(order.total);
 
         Modal.open('viewOrderModal');
+    },
+
+    generateLabelsFromOrder() {
+        if (!this.viewingOrderId) return;
+        
+        const order = DataStore.orders.find(o => o.id === this.viewingOrderId);
+        if (!order) return;
+
+        const customer = {
+            name: order.customer_name || order.customerName,
+            phone: order.customer_phone || order.customerPhone
+        };
+
+        // Generate labels for all items in the order
+        const labelsHtml = (order.items || []).map(item => {
+            if (item.isCombo && item.comboItems) {
+                // For combos, create labels for each item in combo
+                return item.comboItems.map(comboItem => {
+                    const invItem = DataStore.inventory.find(i => i.id === comboItem.itemId);
+                    const category = invItem?.category === 'pickles' ? '🥒 Homemade Pickle' : '🍪 Homemade Snack';
+                    return this.createLabelHtml(comboItem.name, category, item.price / item.comboItems.length, 1, customer);
+                }).join('');
+            } else {
+                const invItem = DataStore.inventory.find(i => i.id === item.itemId);
+                const category = invItem?.category === 'pickles' ? '🥒 Homemade Pickle' : '🍪 Homemade Snack';
+                return this.createLabelHtml(item.name, category, item.price, item.quantity, customer);
+            }
+        }).join('');
+
+        // Open print window
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Order Labels - ${order.order_id || order.orderId}</title>
+                <style>
+                    @page { size: 4in 3in; margin: 0.2in; }
+                    body { 
+                        font-family: 'Segoe UI', Arial, sans-serif; 
+                        padding: 10px; 
+                        margin: 0;
+                    }
+                    .labels-grid {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 15px;
+                        justify-content: center;
+                    }
+                    .label-preview { 
+                        border: 2px solid #8B4513; 
+                        border-radius: 12px;
+                        padding: 15px; 
+                        width: 280px;
+                        text-align: center;
+                        background: #fff;
+                        page-break-inside: avoid;
+                    }
+                    .label-logo { font-size: 22px; font-weight: bold; color: #8B4513; font-family: Georgia, serif; }
+                    .label-tagline { font-size: 10px; color: #666; text-transform: uppercase; }
+                    .label-divider { height: 1px; background: linear-gradient(to right, transparent, #ccc, transparent); margin: 8px 0; }
+                    .product-name { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 4px; }
+                    .product-category { font-size: 11px; color: #666; }
+                    .label-details { background: #f8f8f8; border-radius: 8px; padding: 8px; margin: 8px 0; }
+                    .detail-row { display: flex; justify-content: center; align-items: center; gap: 10px; }
+                    .detail-price { font-size: 16px; color: #2E7D32; font-weight: bold; }
+                    .label-customer { background: #fff3e0; border-radius: 8px; padding: 8px; margin: 6px 0; }
+                    .customer-title { font-size: 9px; color: #888; text-transform: uppercase; }
+                    .customer-name { font-size: 12px; font-weight: bold; }
+                    .customer-phone { font-size: 11px; color: #666; }
+                    .footer-contact { font-size: 10px; color: #666; }
+                    .footer-love { font-size: 9px; color: #e91e63; }
+                    @media print { .label-preview { box-shadow: none; } }
+                </style>
+            </head>
+            <body>
+                <div class="labels-grid">${labelsHtml}</div>
+                <script>setTimeout(() => window.print(), 500);</script>
+            </body>
+            </html>
+        `);
+    },
+
+    createLabelHtml(name, category, price, qty, customer) {
+        return `
+            <div class="label-preview">
+                <div class="label-header">
+                    <div class="label-logo">90's JAR</div>
+                    <div class="label-tagline">Homemade Sankranti Snacks</div>
+                </div>
+                <div class="label-divider"></div>
+                <div class="label-product">
+                    <div class="product-name">${name}</div>
+                    <div class="product-category">${category}</div>
+                </div>
+                <div class="label-details">
+                    <div class="detail-row">
+                        <span><strong>Qty:</strong> ${qty}</span>
+                        <span class="detail-price"><strong>${Utils.formatCurrency(price)}</strong></span>
+                    </div>
+                </div>
+                ${customer ? `
+                <div class="label-divider"></div>
+                <div class="label-customer">
+                    <div class="customer-title">📦 Packed For:</div>
+                    <div class="customer-name">${customer.name}</div>
+                    ${customer.phone ? `<div class="customer-phone">📞 ${customer.phone}</div>` : ''}
+                </div>
+                ` : ''}
+                <div class="label-divider"></div>
+                <div class="label-footer">
+                    <div class="footer-contact">📞 +1 6822742570</div>
+                    <div class="footer-love">Made with ❤️ in USA</div>
+                </div>
+            </div>
+        `;
     },
 
     async deleteOrder(orderId) {

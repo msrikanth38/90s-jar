@@ -66,11 +66,13 @@ const API = {
     // Orders
     async getOrders() { return this.get('orders'); },
     async saveOrder(order) { return this.post('orders', order); },
+    async updateOrder(order) { return this.put(`orders/${order.id}`, order); },
     async updateOrderStatus(id, status) { return this.put(`orders/${id}/status`, { status }); },
     async deleteOrder(id) { return this.delete(`orders/${id}`); },
 
     // History
     async getHistory() { return this.get('history'); },
+    async deleteHistory(id) { return this.delete(`history/${id}`); },
 
     // Combos
     async getCombos() { return this.get('combos'); },
