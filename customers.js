@@ -1,12 +1,39 @@
 // ===== Customers Module =====
 const Customers = {
+    searchQuery: '',
+    
     refresh() {
+        this.renderCustomers();
+    },
+
+    search(query) {
+        this.searchQuery = query.toLowerCase().trim();
+        this.renderCustomers();
+    },
+
+    clearSearch() {
+        this.searchQuery = '';
+        document.getElementById('customersSearch').value = '';
         this.renderCustomers();
     },
 
     renderCustomers() {
         const container = document.getElementById('customersTable');
-        const customers = DataStore.customers;
+        let customers = DataStore.customers;
+        
+        // Apply search filter
+        if (this.searchQuery) {
+            customers = customers.filter(customer => {
+                const searchText = this.searchQuery;
+                return (
+                    customer.name?.toLowerCase().includes(searchText) ||
+                    customer.phone?.toLowerCase().includes(searchText) ||
+                    customer.email?.toLowerCase().includes(searchText) ||
+                    customer.address?.toLowerCase().includes(searchText) ||
+                    String(customer.total_orders || customer.totalOrders || 0).includes(searchText)
+                );
+            });
+        }
 
         if (customers.length === 0) {
             container.innerHTML = `
@@ -14,8 +41,8 @@ const Customers = {
                     <td colspan="6" class="empty-cell">
                         <div class="empty-state">
                             <i class="fas fa-users"></i>
-                            <h3>No Customers Yet</h3>
-                            <p>Customers will appear here when orders are created</p>
+                            <h3>${this.searchQuery ? 'No Customers Found' : 'No Customers Yet'}</h3>
+                            <p>${this.searchQuery ? 'Try a different search term' : 'Customers will appear here when orders are created'}</p>
                         </div>
                     </td>
                 </tr>
@@ -240,13 +267,45 @@ const Finance = {
 
 // ===== History Module =====
 const History = {
+    searchQuery: '',
+    
     refresh() {
+        this.renderHistory();
+    },
+
+    search(query) {
+        this.searchQuery = query.toLowerCase().trim();
+        this.renderHistory();
+    },
+
+    clearSearch() {
+        this.searchQuery = '';
+        document.getElementById('historySearch').value = '';
         this.renderHistory();
     },
 
     renderHistory() {
         const container = document.getElementById('historyTable');
-        const orders = DataStore.orderHistory;
+        let orders = DataStore.orderHistory;
+        
+        // Apply search filter
+        if (this.searchQuery) {
+            orders = orders.filter(order => {
+                const searchText = this.searchQuery;
+                const orderId = order.order_id || order.orderId || '';
+                const customerName = order.customer_name || order.customerName || '';
+                const customerPhone = order.customer_phone || order.customerPhone || '';
+                const itemNames = (order.items || []).map(i => i.name).join(' ').toLowerCase();
+                
+                return (
+                    orderId.toLowerCase().includes(searchText) ||
+                    customerName.toLowerCase().includes(searchText) ||
+                    customerPhone.toLowerCase().includes(searchText) ||
+                    itemNames.includes(searchText) ||
+                    String(order.total).includes(searchText)
+                );
+            });
+        }
 
         if (orders.length === 0) {
             container.innerHTML = `
@@ -254,8 +313,8 @@ const History = {
                     <td colspan="6" class="empty-cell">
                         <div class="empty-state">
                             <i class="fas fa-history"></i>
-                            <h3>No History Yet</h3>
-                            <p>Delivered orders will appear here</p>
+                            <h3>${this.searchQuery ? 'No Records Found' : 'No History Yet'}</h3>
+                            <p>${this.searchQuery ? 'Try a different search term' : 'Delivered orders will appear here'}</p>
                         </div>
                     </td>
                 </tr>

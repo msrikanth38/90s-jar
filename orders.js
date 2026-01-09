@@ -3,6 +3,7 @@ const Orders = {
     currentOrder: { items: [], subtotal: 0, discount: 0, total: 0 },
     editingOrderId: null,
     viewingOrderId: null,
+    searchQuery: '',
 
     refresh() {
         this.renderOrders();
@@ -10,16 +11,42 @@ const Orders = {
         this.populateComboSelect();
     },
 
+    search(query) {
+        this.searchQuery = query.toLowerCase().trim();
+        this.renderOrders();
+    },
+
+    clearSearch() {
+        this.searchQuery = '';
+        document.getElementById('ordersSearch').value = '';
+        this.renderOrders();
+    },
+
     renderOrders() {
         const container = document.getElementById('ordersGrid');
-        const orders = DataStore.orders;
+        let orders = DataStore.orders;
+
+        // Apply search filter
+        if (this.searchQuery) {
+            orders = orders.filter(order => {
+                const searchText = [
+                    order.order_id || order.orderId,
+                    order.customer_name || order.customerName,
+                    order.customer_phone || order.customerPhone,
+                    order.customer_email || order.customerEmail,
+                    order.status,
+                    ...(order.items || []).map(i => i.name)
+                ].join(' ').toLowerCase();
+                return searchText.includes(this.searchQuery);
+            });
+        }
 
         if (orders.length === 0) {
             container.innerHTML = `
                 <div class="empty-state" style="grid-column: 1/-1;">
-                    <i class="fas fa-shopping-cart"></i>
-                    <h3>No Orders Yet</h3>
-                    <p>Create your first order to get started</p>
+                    <i class="fas fa-${this.searchQuery ? 'search' : 'shopping-cart'}"></i>
+                    <h3>${this.searchQuery ? 'No Results Found' : 'No Orders Yet'}</h3>
+                    <p>${this.searchQuery ? 'Try a different search term' : 'Create your first order to get started'}</p>
                 </div>
             `;
             return;

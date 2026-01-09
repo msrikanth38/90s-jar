@@ -77,6 +77,10 @@
                 <i class="fas fa-history"></i>
                 <span>History</span>
             </a>
+            <a class="nav-item" data-tab="grocery">
+                <i class="fas fa-shopping-basket"></i>
+                <span>Grocery</span>
+            </a>
             <a class="nav-item" data-tab="settings">
                 <i class="fas fa-cog"></i>
                 <span>Settings</span>
@@ -173,6 +177,11 @@
                     <i class="fas fa-plus"></i> <span class="btn-text">New Order</span>
                 </button>
             </div>
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" id="ordersSearch" class="search-input" placeholder="Search by order ID, customer name, phone, items..." oninput="Orders.search(this.value)">
+                <button class="search-clear" onclick="Orders.clearSearch()" title="Clear"><i class="fas fa-times"></i></button>
+            </div>
             <div id="ordersGrid" class="orders-grid"></div>
         </div>
 
@@ -183,6 +192,11 @@
                 <button class="btn btn-primary" onclick="openNewItem()">
                     <i class="fas fa-plus"></i> <span class="btn-text">Add Item</span>
                 </button>
+            </div>
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" id="inventorySearch" class="search-input" placeholder="Search items by name, category..." oninput="Inventory.search(this.value)">
+                <button class="search-clear" onclick="Inventory.clearSearch()" title="Clear"><i class="fas fa-times"></i></button>
             </div>
             <div id="inventoryGrid" class="inventory-grid"></div>
         </div>
@@ -220,6 +234,11 @@
                 <button class="btn btn-primary" onclick="openNewCustomer()">
                     <i class="fas fa-plus"></i> <span class="btn-text">Add Customer</span>
                 </button>
+            </div>
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" id="customersSearch" class="search-input" placeholder="Search by name, phone, email..." oninput="Customers.search(this.value)">
+                <button class="search-clear" onclick="Customers.clearSearch()" title="Clear"><i class="fas fa-times"></i></button>
             </div>
             <div class="table-responsive">
                 <table class="data-table">
@@ -400,6 +419,11 @@
             <div class="page-header">
                 <h2>Order History</h2>
             </div>
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" id="historySearch" class="search-input" placeholder="Search by order ID, customer, items, date..." oninput="History.search(this.value)">
+                <button class="search-clear" onclick="History.clearSearch()" title="Clear"><i class="fas fa-times"></i></button>
+            </div>
             <div class="table-responsive">
                 <table class="data-table">
                     <thead>
@@ -414,6 +438,105 @@
                     </thead>
                     <tbody id="historyTable"></tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- Grocery Inventory Tab -->
+        <div id="grocery" class="tab-content">
+            <div class="page-header">
+                <h2>Grocery Inventory</h2>
+                <div class="page-actions">
+                    <button class="btn btn-secondary" onclick="Grocery.showUsageModal()">
+                        <i class="fas fa-clipboard-list"></i> <span class="btn-text">Record Usage</span>
+                    </button>
+                    <button class="btn btn-primary" onclick="Grocery.openAddModal()">
+                        <i class="fas fa-plus"></i> <span class="btn-text">Add Item</span>
+                    </button>
+                </div>
+            </div>
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" id="grocerySearch" class="search-input" placeholder="Search by item name, category, location, purchased by..." oninput="Grocery.search(this.value)">
+                <button class="search-clear" onclick="Grocery.clearSearch()" title="Clear"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <!-- Grocery Stats -->
+            <div class="grocery-stats">
+                <div class="grocery-stat-card">
+                    <i class="fas fa-box"></i>
+                    <div class="stat-info">
+                        <span class="stat-value" id="totalGroceryItems">0</span>
+                        <span class="stat-label">Total Items</span>
+                    </div>
+                </div>
+                <div class="grocery-stat-card warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div class="stat-info">
+                        <span class="stat-value" id="lowStockGrocery">0</span>
+                        <span class="stat-label">Low Stock</span>
+                    </div>
+                </div>
+                <div class="grocery-stat-card danger">
+                    <i class="fas fa-calendar-times"></i>
+                    <div class="stat-info">
+                        <span class="stat-value" id="expiringGrocery">0</span>
+                        <span class="stat-label">Expiring Soon</span>
+                    </div>
+                </div>
+                <div class="grocery-stat-card info">
+                    <i class="fas fa-rupee-sign"></i>
+                    <div class="stat-info">
+                        <span class="stat-value" id="totalGroceryCost">$0</span>
+                        <span class="stat-label">Total Value</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Category Filter -->
+            <div class="grocery-filters">
+                <button class="filter-btn active" onclick="Grocery.filterByCategory('all')">All</button>
+                <button class="filter-btn" onclick="Grocery.filterByCategory('pickles')">🥒 Pickles Grocery</button>
+                <button class="filter-btn" onclick="Grocery.filterByCategory('snacks')">🍪 Snacks Grocery</button>
+                <button class="filter-btn" onclick="Grocery.filterByCategory('other')">📦 Other</button>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="data-table grocery-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Category</th>
+                            <th>Quantity</th>
+                            <th>Purchase Date</th>
+                            <th>Expiry</th>
+                            <th>Purchased By</th>
+                            <th>Location</th>
+                            <th>Cost</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="groceryTable"></tbody>
+                </table>
+            </div>
+            
+            <!-- Usage History Section -->
+            <div class="usage-history-section">
+                <h3><i class="fas fa-history"></i> Recent Usage History</h3>
+                <div class="table-responsive">
+                    <table class="data-table usage-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Qty Used</th>
+                                <th>Used Date</th>
+                                <th>Used By</th>
+                                <th>Purpose</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usageHistoryTable"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -967,6 +1090,160 @@
         </div>
     </div>
 
+    <!-- Grocery Item Modal -->
+    <div id="groceryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-shopping-basket"></i> <span id="groceryModalTitle">Add Grocery Item</span></h3>
+                <button class="modal-close" onclick="Modal.close('groceryModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="groceryItemId" value="">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Item Name *</label>
+                        <input type="text" id="groceryItemName" class="form-control" placeholder="e.g., Rice, Turmeric, Onions">
+                    </div>
+                    <div class="form-group">
+                        <label>Category *</label>
+                        <select id="groceryCategory" class="form-control">
+                            <option value="pickles">🥒 Pickles Grocery</option>
+                            <option value="snacks">🍪 Snacks Grocery</option>
+                            <option value="other">📦 Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Quantity *</label>
+                        <input type="number" id="groceryQuantity" class="form-control" step="0.01" min="0" placeholder="e.g., 5">
+                    </div>
+                    <div class="form-group">
+                        <label>Unit</label>
+                        <select id="groceryUnit" class="form-control">
+                            <option value="kg">Kg</option>
+                            <option value="g">Grams</option>
+                            <option value="liters">Liters</option>
+                            <option value="ml">ML</option>
+                            <option value="pieces">Pieces</option>
+                            <option value="packets">Packets</option>
+                            <option value="bundles">Bundles</option>
+                            <option value="dozens">Dozens</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Purchase Date</label>
+                        <input type="date" id="groceryPurchaseDate" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Expiry Date</label>
+                        <input type="date" id="groceryExpiryDate" class="form-control">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Purchased By</label>
+                        <input type="text" id="groceryPurchasedBy" class="form-control" placeholder="e.g., Srikanth, Mom, Dad">
+                    </div>
+                    <div class="form-group">
+                        <label>Location (Whose Home)</label>
+                        <input type="text" id="groceryLocation" class="form-control" placeholder="e.g., Srikanth's Home, Uncle's Home">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Cost (₹)</label>
+                        <input type="number" id="groceryCost" class="form-control" step="0.01" min="0" placeholder="Total cost">
+                    </div>
+                    <div class="form-group">
+                        <label>Supplier/Store</label>
+                        <input type="text" id="grocerySupplier" class="form-control" placeholder="e.g., Local Market, BigBasket">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="groceryNotes" class="form-control" rows="2" placeholder="Any additional notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="Modal.close('groceryModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="Grocery.saveItem()">
+                    <i class="fas fa-save"></i> Save Item
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grocery Usage Modal -->
+    <div id="groceryUsageModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-clipboard-list"></i> Record Usage</h3>
+                <button class="modal-close" onclick="Modal.close('groceryUsageModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Select Item *</label>
+                    <select id="usageGroceryId" class="form-control">
+                        <option value="">-- Select Item --</option>
+                    </select>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Quantity Used *</label>
+                        <input type="number" id="usageQuantity" class="form-control" step="0.01" min="0.01" placeholder="e.g., 0.5">
+                    </div>
+                    <div class="form-group">
+                        <label>Available</label>
+                        <input type="text" id="usageAvailable" class="form-control" readonly disabled>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Used Date</label>
+                        <input type="date" id="usageDate" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Used By</label>
+                        <input type="text" id="usageUsedBy" class="form-control" placeholder="e.g., Srikanth, Mom">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Purpose</label>
+                    <input type="text" id="usagePurpose" class="form-control" placeholder="e.g., Making Avakaya, Cooking">
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="usageNotes" class="form-control" rows="2" placeholder="Any additional notes..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="Modal.close('groceryUsageModal')">Cancel</button>
+                <button class="btn btn-primary" onclick="Grocery.recordUsage()">
+                    <i class="fas fa-check"></i> Record Usage
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grocery Item Details Modal -->
+    <div id="groceryDetailsModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3><i class="fas fa-info-circle"></i> Item Details</h3>
+                <button class="modal-close" onclick="Modal.close('groceryDetailsModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="groceryDetailsContent">
+                <!-- Dynamic content -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="Modal.close('groceryDetailsModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Container -->
     <div id="toastContainer" class="toast-container"></div>
 
@@ -977,6 +1254,7 @@
     <script src="inventory.js"></script>
     <script src="recipes.js"></script>
     <script src="customers.js"></script>
+    <script src="grocery.js"></script>
     <script src="main.js"></script>
 </body>
 </html>

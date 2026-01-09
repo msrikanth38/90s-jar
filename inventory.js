@@ -1,19 +1,46 @@
 // ===== Inventory Module =====
 const Inventory = {
+    searchQuery: '',
+    
     refresh() {
+        this.renderInventory();
+    },
+
+    search(query) {
+        this.searchQuery = query.toLowerCase().trim();
+        this.renderInventory();
+    },
+
+    clearSearch() {
+        this.searchQuery = '';
+        document.getElementById('inventorySearch').value = '';
         this.renderInventory();
     },
 
     renderInventory() {
         const container = document.getElementById('inventoryGrid');
-        const items = DataStore.inventory;
+        let items = DataStore.inventory;
+        
+        // Apply search filter
+        if (this.searchQuery) {
+            items = items.filter(item => {
+                const searchText = this.searchQuery;
+                return (
+                    item.name?.toLowerCase().includes(searchText) ||
+                    item.category?.toLowerCase().includes(searchText) ||
+                    item.description?.toLowerCase().includes(searchText) ||
+                    String(item.stock).includes(searchText) ||
+                    String(item.selling_price || item.sellingPrice).includes(searchText)
+                );
+            });
+        }
 
         if (items.length === 0) {
             container.innerHTML = `
                 <div class="empty-state" style="grid-column: 1/-1;">
                     <i class="fas fa-box-open"></i>
-                    <h3>No Items Yet</h3>
-                    <p>Add your first inventory item</p>
+                    <h3>${this.searchQuery ? 'No Items Found' : 'No Items Yet'}</h3>
+                    <p>${this.searchQuery ? 'Try a different search term' : 'Add your first inventory item'}</p>
                 </div>
             `;
             return;

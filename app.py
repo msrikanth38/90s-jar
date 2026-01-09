@@ -208,6 +208,36 @@ def init_db():
             value TEXT
         )''')
         
+        # Grocery inventory table
+        cur.execute('''CREATE TABLE IF NOT EXISTS grocery (
+            id TEXT PRIMARY KEY,
+            item_name TEXT NOT NULL,
+            category TEXT NOT NULL,
+            quantity REAL NOT NULL DEFAULT 0,
+            unit TEXT DEFAULT 'kg',
+            purchase_date TEXT,
+            expiry_date TEXT,
+            purchased_by TEXT,
+            location TEXT,
+            cost REAL DEFAULT 0,
+            supplier TEXT,
+            notes TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )''')
+        
+        # Grocery usage tracking table
+        cur.execute('''CREATE TABLE IF NOT EXISTS grocery_usage (
+            id TEXT PRIMARY KEY,
+            grocery_id TEXT NOT NULL,
+            quantity_used REAL NOT NULL,
+            used_date TEXT,
+            used_by TEXT,
+            purpose TEXT,
+            notes TEXT,
+            created_at TEXT
+        )''')
+        
     else:
         # SQLite syntax
         cur.execute('''CREATE TABLE IF NOT EXISTS inventory (
@@ -320,6 +350,36 @@ def init_db():
         cur.execute('''CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
             value TEXT
+        )''')
+        
+        # Grocery inventory table
+        cur.execute('''CREATE TABLE IF NOT EXISTS grocery (
+            id TEXT PRIMARY KEY,
+            item_name TEXT NOT NULL,
+            category TEXT NOT NULL,
+            quantity REAL NOT NULL DEFAULT 0,
+            unit TEXT DEFAULT 'kg',
+            purchase_date TEXT,
+            expiry_date TEXT,
+            purchased_by TEXT,
+            location TEXT,
+            cost REAL DEFAULT 0,
+            supplier TEXT,
+            notes TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )''')
+        
+        # Grocery usage tracking table
+        cur.execute('''CREATE TABLE IF NOT EXISTS grocery_usage (
+            id TEXT PRIMARY KEY,
+            grocery_id TEXT NOT NULL,
+            quantity_used REAL NOT NULL,
+            used_date TEXT,
+            used_by TEXT,
+            purpose TEXT,
+            notes TEXT,
+            created_at TEXT
         )''')
     
     conn.commit()
@@ -851,6 +911,180 @@ def delete_offer(offer_id):
     execute_query('DELETE FROM offers WHERE id = ?', (offer_id,), commit=True)
     return jsonify({'success': True})
 
+# ===== Grocery Inventory API =====
+@app.route('/api/grocery', methods=['GET'])
+def get_grocery():
+    try:
+        grocery = execute_query('SELECT * FROM grocery ORDER BY created_at DESC', fetch=True)
+        return jsonify({'success': True, 'data': grocery})
+    except Exception as e:
+        logger.error(f"Error getting grocery: {e}")
+        return jsonify({'success': True, 'data': []})
+
+@app.route('/api/grocery', methods=['POST'])
+def save_grocery():
+    data = request.json
+    conn, is_postgres = get_db()
+    cur = conn.cursor()
+    
+    item_id = data.get('id')
+    now = datetime.now().isoformat()
+    
+    try:
+        if item_id:
+            # Update existing item
+            if is_postgres:
+                cur.execute('''
+                    UPDATE grocery SET item_name=%s, category=%s, quantity=%s, unit=%s,
+                    purchase_date=%s, expiry_date=%s, purchased_by=%s, location=%s,
+                    cost=%s, supplier=%s, notes=%s, updated_at=%s
+                    WHERE id=%s
+                ''', (data.get('item_name'), data.get('category'), data.get('quantity', 0),
+                      data.get('unit', 'kg'), data.get('purchase_date'), data.get('expiry_date'),
+                      data.get('purchased_by'), data.get('location'), data.get('cost', 0),
+                      data.get('supplier'), data.get('notes'), now, item_id))
+            else:
+                cur.execute('''
+                    UPDATE grocery SET item_name=?, category=?, quantity=?, unit=?,
+                    purchase_date=?, expiry_date=?, purchased_by=?, location=?,
+                    cost=?, supplier=?, notes=?, updated_at=?
+                    WHERE id=?
+                ''', (data.get('item_name'), data.get('category'), data.get('quantity', 0),
+                      data.get('unit', 'kg'), data.get('purchase_date'), data.get('expiry_date'),
+                      data.get('purchased_by'), data.get('location'), data.get('cost', 0),
+                      data.get('supplier'), data.get('notes'), now, item_id))
+        else:
+            # Insert new item
+            item_id = generate_id()
+            if is_postgres:
+                cur.execute('''
+                    INSERT INTO grocery (id, item_name, category, quantity, unit, purchase_date,
+                    expiry_date, purchased_by, location, cost, supplier, notes, created_at, updated_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (item_id, data.get('item_name'), data.get('category'), data.get('quantity', 0),
+                      data.get('unit', 'kg'), data.get('purchase_date'), data.get('expiry_date'),
+                      data.get('purchased_by'), data.get('location'), data.get('cost', 0),
+                      data.get('supplier'), data.get('notes'), now, now))
+            else:
+                cur.execute('''
+                    INSERT INTO grocery (id, item_name, category, quantity, unit, purchase_date,
+                    expiry_date, purchased_by, location, cost, supplier, notes, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (item_id, data.get('item_name'), data.get('category'), data.get('quantity', 0),
+                      data.get('unit', 'kg'), data.get('purchase_date'), data.get('expiry_date'),
+                      data.get('purchased_by'), data.get('location'), data.get('cost', 0),
+                      data.get('supplier'), data.get('notes'), now, now))
+        
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'id': item_id})
+    except Exception as e:
+        conn.close()
+        logger.error(f"Error saving grocery: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/grocery/<item_id>', methods=['DELETE'])
+def delete_grocery(item_id):
+    try:
+        # Delete usage records first
+        execute_query('DELETE FROM grocery_usage WHERE grocery_id = ?', (item_id,), commit=True)
+        # Delete the item
+        execute_query('DELETE FROM grocery WHERE id = ?', (item_id,), commit=True)
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error deleting grocery: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+# ===== Grocery Usage API =====
+@app.route('/api/grocery/usage', methods=['GET'])
+def get_grocery_usage():
+    try:
+        usage = execute_query('SELECT * FROM grocery_usage ORDER BY used_date DESC, created_at DESC', fetch=True)
+        return jsonify({'success': True, 'data': usage})
+    except Exception as e:
+        logger.error(f"Error getting grocery usage: {e}")
+        return jsonify({'success': True, 'data': []})
+
+@app.route('/api/grocery/usage', methods=['POST'])
+def record_grocery_usage():
+    data = request.json
+    conn, is_postgres = get_db()
+    cur = conn.cursor()
+    
+    usage_id = generate_id()
+    now = datetime.now().isoformat()
+    grocery_id = data.get('grocery_id')
+    quantity_used = data.get('quantity_used', 0)
+    
+    try:
+        # Insert usage record
+        if is_postgres:
+            cur.execute('''
+                INSERT INTO grocery_usage (id, grocery_id, quantity_used, used_date, used_by, purpose, notes, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (usage_id, grocery_id, quantity_used, data.get('used_date'),
+                  data.get('used_by'), data.get('purpose'), data.get('notes'), now))
+            
+            # Update grocery quantity
+            cur.execute('''
+                UPDATE grocery SET quantity = quantity - %s, updated_at = %s WHERE id = %s
+            ''', (quantity_used, now, grocery_id))
+        else:
+            cur.execute('''
+                INSERT INTO grocery_usage (id, grocery_id, quantity_used, used_date, used_by, purpose, notes, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (usage_id, grocery_id, quantity_used, data.get('used_date'),
+                  data.get('used_by'), data.get('purpose'), data.get('notes'), now))
+            
+            # Update grocery quantity
+            cur.execute('''
+                UPDATE grocery SET quantity = quantity - ?, updated_at = ? WHERE id = ?
+            ''', (quantity_used, now, grocery_id))
+        
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'id': usage_id})
+    except Exception as e:
+        conn.close()
+        logger.error(f"Error recording usage: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/grocery/usage/<usage_id>', methods=['DELETE'])
+def delete_grocery_usage(usage_id):
+    try:
+        # Get the usage record first to restore quantity
+        usage = execute_query('SELECT * FROM grocery_usage WHERE id = ?', (usage_id,), fetchone=True)
+        
+        if usage:
+            conn, is_postgres = get_db()
+            cur = conn.cursor()
+            
+            now = datetime.now().isoformat()
+            
+            # Restore the quantity to grocery item
+            if is_postgres:
+                cur.execute('''
+                    UPDATE grocery SET quantity = quantity + %s, updated_at = %s WHERE id = %s
+                ''', (usage['quantity_used'], now, usage['grocery_id']))
+            else:
+                cur.execute('''
+                    UPDATE grocery SET quantity = quantity + ?, updated_at = ? WHERE id = ?
+                ''', (usage['quantity_used'], now, usage['grocery_id']))
+            
+            # Delete the usage record
+            if is_postgres:
+                cur.execute('DELETE FROM grocery_usage WHERE id = %s', (usage_id,))
+            else:
+                cur.execute('DELETE FROM grocery_usage WHERE id = ?', (usage_id,))
+            
+            conn.commit()
+            conn.close()
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error deleting usage: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
 # ===== Dashboard Stats API =====
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
@@ -924,7 +1158,7 @@ def get_stats():
 @app.route('/api/export', methods=['GET'])
 def export_data():
     data = {}
-    for table in ['inventory', 'customers', 'orders', 'order_history', 'combos', 'recipes', 'transactions', 'offers']:
+    for table in ['inventory', 'customers', 'orders', 'order_history', 'combos', 'recipes', 'transactions', 'offers', 'grocery', 'grocery_usage']:
         data[table] = execute_query(f'SELECT * FROM {table}', fetch=True)
     return jsonify(data)
 
@@ -935,7 +1169,7 @@ def import_data():
     cur = conn.cursor()
     
     # Clear existing data
-    for table in ['inventory', 'customers', 'orders', 'order_history', 'combos', 'recipes', 'transactions', 'offers']:
+    for table in ['inventory', 'customers', 'orders', 'order_history', 'combos', 'recipes', 'transactions', 'offers', 'grocery', 'grocery_usage']:
         cur.execute(f'DELETE FROM {table}')
     
     # Import inventory

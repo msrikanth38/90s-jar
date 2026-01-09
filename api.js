@@ -99,7 +99,17 @@ const API = {
 
     // Export/Import
     async exportData() { return this.get('export'); },
-    async importData(data) { return this.post('import', data); }
+    async importData(data) { return this.post('import', data); },
+
+    // Grocery Inventory
+    async getGrocery() { return this.get('grocery'); },
+    async saveGrocery(item) { return this.post('grocery', item); },
+    async deleteGrocery(id) { return this.delete(`grocery/${id}`); },
+
+    // Grocery Usage
+    async getGroceryUsage() { return this.get('grocery/usage'); },
+    async recordGroceryUsage(usage) { return this.post('grocery/usage', usage); },
+    async deleteGroceryUsage(id) { return this.delete(`grocery/usage/${id}`); }
 };
 
 // ===== Data Store (cached data) =====

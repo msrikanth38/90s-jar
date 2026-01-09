@@ -42,6 +42,7 @@ const Navigation = {
             case 'finance': Finance.refresh(); break;
             case 'labels': Labels.refresh(); break;
             case 'history': History.refresh(); break;
+            case 'grocery': Grocery.refresh(); break;
         }
     }
 };
