@@ -1314,8 +1314,11 @@ textarea.form-control {
     width: 100%;
     max-width: 500px;
     max-height: 90vh;
+    max-height: 90dvh;
     overflow-y: auto;
     box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-content.modal-large {
@@ -1362,6 +1365,8 @@ textarea.form-control {
 
 .modal-body {
     padding: 20px;
+    flex: 1;
+    overflow-y: auto;
 }
 
 .modal-footer {
@@ -1373,6 +1378,7 @@ textarea.form-control {
     position: sticky;
     bottom: 0;
     background: var(--bg-card);
+    flex-shrink: 0;
 }
 
 /* Order Form Grid */
@@ -2070,6 +2076,160 @@ textarea.form-control {
     
     .combo-checkboxes {
         grid-template-columns: 1fr;
+    }
+    
+    /* Mobile Modal Fixes */
+    .modal {
+        padding: 10px;
+    }
+    
+    .modal-content {
+        margin: 0;
+        max-height: calc(100vh - 20px);
+        max-height: calc(100dvh - 20px);
+        width: 100%;
+        max-width: 100%;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .modal-header {
+        padding: 15px;
+        flex-shrink: 0;
+        position: relative;
+        z-index: 10;
+    }
+    
+    .modal-header h3 {
+        font-size: 1rem;
+        flex: 1;
+        padding-right: 40px;
+    }
+    
+    .modal-close {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 36px;
+        height: 36px;
+        font-size: 1.5rem;
+        background: var(--danger);
+        color: white;
+        z-index: 20;
+    }
+    
+    .modal-body {
+        padding: 15px;
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .modal-footer {
+        padding: 15px;
+        flex-shrink: 0;
+        position: relative;
+        z-index: 10;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .modal-footer .btn {
+        flex: 1;
+        min-width: 100px;
+        padding: 12px 15px;
+        font-size: 0.9rem;
+        justify-content: center;
+    }
+    
+    .modal-footer .btn-secondary {
+        background: #6c757d;
+        color: white;
+        border: none;
+    }
+    
+    /* Page Header Button Fix */
+    .page-header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .page-header .btn {
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 10px 15px;
+    }
+    
+    .page-header .btn .btn-text {
+        display: inline;
+    }
+    
+    /* Order Items List */
+    .order-items-list {
+        max-height: 150px;
+    }
+    
+    /* Add Item Row Mobile */
+    .add-item-row {
+        flex-wrap: wrap;
+    }
+    
+    .add-item-row select,
+    .add-item-row input {
+        min-width: 0;
+    }
+    
+    .add-item-row .btn {
+        flex-shrink: 0;
+    }
+    
+    /* Combo Selector Modal Mobile */
+    #comboSelectorModal .modal-content {
+        max-height: 90vh;
+        max-height: 90dvh;
+    }
+    
+    #comboSelectorModal .modal-body {
+        padding: 10px;
+    }
+    
+    #comboSelectorModal .modal-footer {
+        padding: 10px 15px;
+    }
+    
+    #comboSelectorModal .modal-footer .btn {
+        padding: 12px 20px;
+    }
+}
+
+/* ===== Extra Small Mobile ===== */
+@media (max-width: 400px) {
+    .modal-header h3 {
+        font-size: 0.9rem;
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .page-header .btn {
+        width: 100%;
+        justify-content: center;
     }
 }
 
