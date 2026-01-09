@@ -1050,17 +1050,18 @@ body {
 }
 
 .items-cell {
-    max-width: 200px;
+    max-width: 250px;
 }
 
 .item-badge {
     display: inline-block;
-    background: var(--primary-light);
-    color: var(--primary);
-    padding: 2px 8px;
+    background: var(--primary);
+    color: white;
+    padding: 4px 10px;
     border-radius: 12px;
     font-size: 0.75rem;
     margin: 2px;
+    white-space: nowrap;
 }
 
 .total-amount {

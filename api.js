@@ -103,7 +103,7 @@ const API = {
     async getOrders() { return this.get('orders'); },
     async saveOrder(order) { return this.post('orders', order); },
     async updateOrder(order) { return this.put(`orders/${order.id}`, order); },
-    async updateOrderStatus(id, status) { return this.put(`orders/${id}/status`, { status }); },
+    async updateOrderStatus(id, status, deliveredAt = null) { return this.put(`orders/${id}/status`, { status, deliveredAt }); },
     async deleteOrder(id) { return this.delete(`orders/${id}`); },
 
     // History

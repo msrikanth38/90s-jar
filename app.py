@@ -691,6 +691,9 @@ def update_order(order_id):
 def update_order_status(order_id):
     data = request.json
     new_status = data['status']
+    # Use client's local datetime if provided, otherwise use server time
+    delivered_at = data.get('deliveredAt') or datetime.now().isoformat()
+    
     conn, is_postgres = get_db()
     cur = conn.cursor()
     
@@ -704,19 +707,18 @@ def update_order_status(order_id):
         order = cur.fetchone()
         if order:
             order = dict(order)
-            now = datetime.now().isoformat()
             
             if is_postgres:
                 cur.execute('''
                     INSERT INTO order_history (id, order_id, customer_name, customer_phone, customer_email, customer_address, items, subtotal, discount, total, deadline, notes, status, created_at, delivered_at)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ''', (order['id'], order['order_id'], order['customer_name'], order['customer_phone'], order['customer_email'], order['customer_address'], order['items'], order['subtotal'], order['discount'], order['total'], order['deadline'], order['notes'], 'completed', order['created_at'], now))
+                ''', (order['id'], order['order_id'], order['customer_name'], order['customer_phone'], order['customer_email'], order['customer_address'], order['items'], order['subtotal'], order['discount'], order['total'], order['deadline'], order['notes'], 'completed', order['created_at'], delivered_at))
                 cur.execute('DELETE FROM orders WHERE id = %s', (order_id,))
             else:
                 cur.execute('''
                     INSERT INTO order_history (id, order_id, customer_name, customer_phone, customer_email, customer_address, items, subtotal, discount, total, deadline, notes, status, created_at, delivered_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (order['id'], order['order_id'], order['customer_name'], order['customer_phone'], order['customer_email'], order['customer_address'], order['items'], order['subtotal'], order['discount'], order['total'], order['deadline'], order['notes'], 'completed', order['created_at'], now))
+                ''', (order['id'], order['order_id'], order['customer_name'], order['customer_phone'], order['customer_email'], order['customer_address'], order['items'], order['subtotal'], order['discount'], order['total'], order['deadline'], order['notes'], 'completed', order['created_at'], delivered_at))
                 cur.execute('DELETE FROM orders WHERE id = ?', (order_id,))
     else:
         # Just update status (pending, processing, shipped, delivered)

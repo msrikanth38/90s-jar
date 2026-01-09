@@ -650,8 +650,11 @@ const Orders = {
             return;
         }
         
+        // Send local datetime so income is recorded for TODAY (user's timezone)
+        const localDateTime = new Date().toISOString();
+        
         // Update status to completed and move to history
-        const result = await API.updateOrderStatus(this.viewingOrderId, 'completed');
+        const result = await API.updateOrderStatus(this.viewingOrderId, 'completed', localDateTime);
         
         if (result.success) {
             Toast.success('Order Completed', `Order moved to history. Income: ${Utils.formatCurrency(order.total)}`);
