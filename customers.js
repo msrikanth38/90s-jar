@@ -872,5 +872,65 @@ const Settings = {
             reader.readAsText(file);
         };
         input.click();
+    },
+
+    async checkDatabaseStatus() {
+        const statusIcon = document.getElementById('dbStatusIcon');
+        const statusText = document.getElementById('dbStatusText');
+        const statusDetails = document.getElementById('dbStatusDetails');
+        const statusCard = document.getElementById('dbStatusCard');
+        
+        statusIcon.textContent = '⏳';
+        statusText.textContent = 'Checking database...';
+        statusCard.className = 'db-status-card checking';
+        
+        try {
+            const debug = await API.getDebugInfo();
+            
+            if (debug.using_postgres) {
+                statusIcon.textContent = '✅';
+                statusText.textContent = 'PostgreSQL Connected (Data Persists)';
+                statusCard.className = 'db-status-card connected';
+                statusDetails.innerHTML = `
+                    <p><strong>Status:</strong> Your data is safely stored in PostgreSQL database.</p>
+                    <p><strong>Persistence:</strong> Data will NOT be lost on server restart.</p>
+                `;
+            } else {
+                statusIcon.textContent = '⚠️';
+                statusText.textContent = 'SQLite Mode (Ephemeral Storage)';
+                statusCard.className = 'db-status-card warning';
+                
+                let reason = 'Unknown';
+                if (!debug.database_url_set) {
+                    reason = 'DATABASE_URL environment variable is not set';
+                } else if (!debug.has_postgres) {
+                    reason = 'psycopg module not available: ' + (debug.postgres_import_error || 'Unknown error');
+                }
+                
+                statusDetails.innerHTML = `
+                    <p><strong>Warning:</strong> Using SQLite (local/temporary storage).</p>
+                    <p><strong>Reason:</strong> ${reason}</p>
+                    <p><strong>Impact:</strong> Data may be lost when server restarts!</p>
+                    <p><strong>Solution:</strong> Set DATABASE_URL in Render environment variables.</p>
+                `;
+            }
+            
+            // Show backup info
+            const backup = localStorage.getItem('data_backup');
+            if (backup) {
+                const data = JSON.parse(backup);
+                document.getElementById('backupInfoText').textContent = 
+                    `Last local backup: ${new Date(data.timestamp).toLocaleString()}`;
+            }
+            
+        } catch (error) {
+            statusIcon.textContent = '❌';
+            statusText.textContent = 'Cannot connect to server';
+            statusCard.className = 'db-status-card error';
+            statusDetails.innerHTML = `
+                <p><strong>Error:</strong> ${error.message || 'Server unreachable'}</p>
+                <p><strong>Solution:</strong> Check if the server is running.</p>
+            `;
+        }
     }
 };

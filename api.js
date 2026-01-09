@@ -109,7 +109,10 @@ const API = {
     // Grocery Usage
     async getGroceryUsage() { return this.get('grocery/usage'); },
     async recordGroceryUsage(usage) { return this.post('grocery/usage', usage); },
-    async deleteGroceryUsage(id) { return this.delete(`grocery/usage/${id}`); }
+    async deleteGroceryUsage(id) { return this.delete(`grocery/usage/${id}`); },
+
+    // Debug
+    async getDebugInfo() { return this.get('debug'); }
 };
 
 // ===== Data Store (cached data) =====
@@ -152,15 +155,61 @@ const DataStore = {
                 this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
             }
             
+            // Auto-backup data to localStorage after successful load
+            this.backupToLocalStorage();
+            
             return true;
         } catch (error) {
             console.error('Failed to load data:', error);
+            // Try to restore from localStorage backup
+            this.restoreFromLocalStorage();
             return false;
         }
     },
 
     saveSettings() {
         localStorage.setItem('settings', JSON.stringify(this.settings));
+    },
+    
+    backupToLocalStorage() {
+        try {
+            const backup = {
+                inventory: this.inventory,
+                orders: this.orders,
+                combos: this.combos,
+                recipes: this.recipes,
+                customers: this.customers,
+                transactions: this.transactions,
+                offers: this.offers,
+                orderHistory: this.orderHistory,
+                timestamp: new Date().toISOString()
+            };
+            localStorage.setItem('data_backup', JSON.stringify(backup));
+            console.log('Data backed up to localStorage at', backup.timestamp);
+        } catch (e) {
+            console.warn('Could not backup to localStorage:', e);
+        }
+    },
+    
+    restoreFromLocalStorage() {
+        try {
+            const backup = localStorage.getItem('data_backup');
+            if (backup) {
+                const data = JSON.parse(backup);
+                this.inventory = data.inventory || [];
+                this.orders = data.orders || [];
+                this.combos = data.combos || [];
+                this.recipes = data.recipes || [];
+                this.customers = data.customers || [];
+                this.transactions = data.transactions || [];
+                this.offers = data.offers || [];
+                this.orderHistory = data.orderHistory || [];
+                console.log('Data restored from localStorage backup from', data.timestamp);
+                Toast.warning('Offline Mode', 'Using cached data. Server may be unavailable.');
+            }
+        } catch (e) {
+            console.warn('Could not restore from localStorage:', e);
+        }
     },
 
     generateId() {

@@ -11,6 +11,9 @@ async function initApp() {
     Modal.init();
     Settings.init();
     
+    // Check database status on startup
+    Settings.checkDatabaseStatus();
+    
     // Apply dark mode if enabled
     if (DataStore.settings.darkMode) {
         document.body.classList.add('dark-mode');

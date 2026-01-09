@@ -449,46 +449,64 @@
                     <button class="btn btn-secondary" onclick="Grocery.showUsageModal()">
                         <i class="fas fa-clipboard-list"></i> <span class="btn-text">Record Usage</span>
                     </button>
+                    <button class="btn btn-info" onclick="Grocery.showStatsModal()">
+                        <i class="fas fa-chart-pie"></i> <span class="btn-text">View Stats</span>
+                    </button>
                     <button class="btn btn-primary" onclick="Grocery.openAddModal()">
                         <i class="fas fa-plus"></i> <span class="btn-text">Add Item</span>
                     </button>
                 </div>
             </div>
-            <div class="search-bar">
-                <i class="fas fa-search"></i>
-                <input type="text" id="grocerySearch" class="search-input" placeholder="Search by item name, category, location, purchased by..." oninput="Grocery.search(this.value)">
-                <button class="search-clear" onclick="Grocery.clearSearch()" title="Clear"><i class="fas fa-times"></i></button>
-            </div>
             
-            <!-- Grocery Stats -->
-            <div class="grocery-stats">
-                <div class="grocery-stat-card">
-                    <i class="fas fa-box"></i>
-                    <div class="stat-info">
-                        <span class="stat-value" id="totalGroceryItems">0</span>
-                        <span class="stat-label">Total Items</span>
+            <!-- Top Section: Search + Chart -->
+            <div class="grocery-top-section">
+                <div class="grocery-left">
+                    <div class="search-bar">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="grocerySearch" class="search-input" placeholder="Search by item name, category, location, purchased by..." oninput="Grocery.search(this.value)">
+                        <button class="search-clear" onclick="Grocery.clearSearch()" title="Clear"><i class="fas fa-times"></i></button>
+                    </div>
+                    
+                    <!-- Grocery Stats Cards -->
+                    <div class="grocery-stats">
+                        <div class="grocery-stat-card">
+                            <i class="fas fa-box"></i>
+                            <div class="stat-info">
+                                <span class="stat-value" id="totalGroceryItems">0</span>
+                                <span class="stat-label">Total Items</span>
+                            </div>
+                        </div>
+                        <div class="grocery-stat-card warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <div class="stat-info">
+                                <span class="stat-value" id="lowStockGrocery">0</span>
+                                <span class="stat-label">Low Stock</span>
+                            </div>
+                        </div>
+                        <div class="grocery-stat-card danger">
+                            <i class="fas fa-calendar-times"></i>
+                            <div class="stat-info">
+                                <span class="stat-value" id="expiringGrocery">0</span>
+                                <span class="stat-label">Expiring Soon</span>
+                            </div>
+                        </div>
+                        <div class="grocery-stat-card info">
+                            <i class="fas fa-dollar-sign"></i>
+                            <div class="stat-info">
+                                <span class="stat-value" id="totalGroceryCost">$0</span>
+                                <span class="stat-label">Total Value</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="grocery-stat-card warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <div class="stat-info">
-                        <span class="stat-value" id="lowStockGrocery">0</span>
-                        <span class="stat-label">Low Stock</span>
+                
+                <!-- Chart Section -->
+                <div class="grocery-chart-section">
+                    <h4><i class="fas fa-chart-pie"></i> Inventory by Category</h4>
+                    <div class="grocery-chart" id="groceryChart">
+                        <canvas id="groceryPieChart" width="200" height="200"></canvas>
                     </div>
-                </div>
-                <div class="grocery-stat-card danger">
-                    <i class="fas fa-calendar-times"></i>
-                    <div class="stat-info">
-                        <span class="stat-value" id="expiringGrocery">0</span>
-                        <span class="stat-label">Expiring Soon</span>
-                    </div>
-                </div>
-                <div class="grocery-stat-card info">
-                    <i class="fas fa-rupee-sign"></i>
-                    <div class="stat-info">
-                        <span class="stat-value" id="totalGroceryCost">$0</span>
-                        <span class="stat-label">Total Value</span>
-                    </div>
+                    <div class="chart-legend" id="groceryChartLegend"></div>
                 </div>
             </div>
             
@@ -585,6 +603,16 @@
 
                 <div class="settings-section">
                     <h3><i class="fas fa-database"></i> Data Management</h3>
+                    
+                    <!-- Database Status -->
+                    <div class="db-status-card" id="dbStatusCard">
+                        <div class="db-status-header">
+                            <span class="db-status-icon" id="dbStatusIcon">⏳</span>
+                            <span class="db-status-text" id="dbStatusText">Checking database...</span>
+                        </div>
+                        <div class="db-status-details" id="dbStatusDetails"></div>
+                    </div>
+                    
                     <div class="btn-group">
                         <button class="btn btn-secondary" onclick="Settings.exportData()">
                             <i class="fas fa-download"></i> Export Data
@@ -592,6 +620,15 @@
                         <button class="btn btn-secondary" onclick="Settings.importData()">
                             <i class="fas fa-upload"></i> Import Data
                         </button>
+                        <button class="btn btn-info" onclick="Settings.checkDatabaseStatus()">
+                            <i class="fas fa-sync"></i> Check DB Status
+                        </button>
+                    </div>
+                    
+                    <!-- Local Backup Info -->
+                    <div class="backup-info" id="backupInfo">
+                        <i class="fas fa-info-circle"></i>
+                        <span id="backupInfoText">Data is automatically backed up locally.</span>
                     </div>
                 </div>
 
@@ -1102,7 +1139,8 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Item Name *</label>
-                        <input type="text" id="groceryItemName" class="form-control" placeholder="e.g., Rice, Turmeric, Onions">
+                        <input type="text" id="groceryItemName" class="form-control" list="groceryItemSuggestions" placeholder="e.g., Rice, Turmeric, Onions" autocomplete="off">
+                        <datalist id="groceryItemSuggestions"></datalist>
                     </div>
                     <div class="form-group">
                         <label>Category *</label>
@@ -1154,7 +1192,7 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Cost (₹)</label>
+                        <label>Cost ($)</label>
                         <input type="number" id="groceryCost" class="form-control" step="0.01" min="0" placeholder="Total cost">
                     </div>
                     <div class="form-group">
@@ -1240,6 +1278,22 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="Modal.close('groceryDetailsModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grocery Stats Modal -->
+    <div id="groceryStatsModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3><i class="fas fa-chart-bar"></i> Grocery Usage Statistics</h3>
+                <button class="modal-close" onclick="Modal.close('groceryStatsModal')">&times;</button>
+            </div>
+            <div class="modal-body" id="groceryStatsContent">
+                <!-- Dynamic stats content -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="Modal.close('groceryStatsModal')">Close</button>
             </div>
         </div>
     </div>

@@ -4,12 +4,19 @@ const Grocery = {
     categoryFilter: 'all',
     items: [],
     usageHistory: [],
+    chartColors: {
+        'pickles': '#8B4513',
+        'snacks': '#D2691E',
+        'other': '#DAA520'
+    },
 
     async refresh() {
         await this.loadData();
         this.renderGrocery();
         this.renderUsageHistory();
         this.updateStats();
+        this.renderChart();
+        this.updateItemSuggestions();
     },
 
     async loadData() {
@@ -25,6 +32,126 @@ const Grocery = {
             this.items = [];
             this.usageHistory = [];
         }
+    },
+
+    // Auto-suggest item names from existing inventory
+    updateItemSuggestions() {
+        const datalist = document.getElementById('groceryItemSuggestions');
+        if (!datalist) return;
+        
+        // Get unique item names from inventory and usage history
+        const itemNames = new Set();
+        this.items.forEach(item => itemNames.add(item.item_name));
+        this.usageHistory.forEach(usage => {
+            const item = this.items.find(i => i.id === usage.grocery_id);
+            if (item) itemNames.add(item.item_name);
+        });
+        
+        // Add common grocery items for pickles and snacks business
+        const commonItems = [
+            'Raw Mangoes', 'Lemons', 'Green Chillies', 'Red Chilli Powder', 'Turmeric Powder',
+            'Mustard Seeds', 'Fenugreek Seeds', 'Salt', 'Sesame Oil', 'Groundnut Oil',
+            'Garlic', 'Ginger', 'Tamarind', 'Jaggery', 'Rice Flour', 'Besan (Gram Flour)',
+            'Urad Dal', 'Chana Dal', 'Moong Dal', 'Rice', 'Peanuts', 'Cashews',
+            'Curry Leaves', 'Asafoetida', 'Cumin Seeds', 'Coriander Seeds', 'Black Pepper',
+            'Vinegar', 'Sugar', 'Coconut', 'Dried Red Chillies', 'Mustard Oil'
+        ];
+        commonItems.forEach(name => itemNames.add(name));
+        
+        datalist.innerHTML = Array.from(itemNames)
+            .sort()
+            .map(name => `<option value="${name}">`)
+            .join('');
+    },
+
+    // Render pie chart for category distribution
+    renderChart() {
+        const canvas = document.getElementById('groceryPieChart');
+        const legendContainer = document.getElementById('groceryChartLegend');
+        if (!canvas || !legendContainer) return;
+
+        const ctx = canvas.getContext('2d');
+        
+        // Calculate category totals
+        const categoryData = {
+            'pickles': { count: 0, value: 0 },
+            'snacks': { count: 0, value: 0 },
+            'other': { count: 0, value: 0 }
+        };
+        
+        this.items.forEach(item => {
+            const cat = item.category || 'other';
+            if (categoryData[cat]) {
+                categoryData[cat].count++;
+                categoryData[cat].value += item.cost || 0;
+            }
+        });
+
+        const total = this.items.length || 1;
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        if (this.items.length === 0) {
+            ctx.fillStyle = '#ccc';
+            ctx.beginPath();
+            ctx.arc(100, 100, 80, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.fillStyle = '#666';
+            ctx.font = '14px Poppins';
+            ctx.textAlign = 'center';
+            ctx.fillText('No Data', 100, 105);
+            legendContainer.innerHTML = '<p class="no-data">Add items to see chart</p>';
+            return;
+        }
+
+        // Draw pie chart
+        let startAngle = -Math.PI / 2;
+        const categories = ['pickles', 'snacks', 'other'];
+        
+        categories.forEach(cat => {
+            const count = categoryData[cat].count;
+            if (count > 0) {
+                const sliceAngle = (count / total) * 2 * Math.PI;
+                ctx.beginPath();
+                ctx.moveTo(100, 100);
+                ctx.arc(100, 100, 80, startAngle, startAngle + sliceAngle);
+                ctx.closePath();
+                ctx.fillStyle = this.chartColors[cat];
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                startAngle += sliceAngle;
+            }
+        });
+
+        // Draw center circle (donut effect)
+        ctx.beginPath();
+        ctx.arc(100, 100, 40, 0, 2 * Math.PI);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        
+        // Draw total in center
+        ctx.fillStyle = '#2C1810';
+        ctx.font = 'bold 20px Poppins';
+        ctx.textAlign = 'center';
+        ctx.fillText(total, 100, 95);
+        ctx.font = '10px Poppins';
+        ctx.fillText('Items', 100, 110);
+
+        // Render legend
+        legendContainer.innerHTML = categories.map(cat => {
+            const data = categoryData[cat];
+            const percent = total > 0 ? Math.round((data.count / total) * 100) : 0;
+            return `
+                <div class="legend-item">
+                    <span class="legend-color" style="background: ${this.chartColors[cat]}"></span>
+                    <span class="legend-label">${this.getCategoryEmoji(cat)} ${this.getCategoryLabel(cat)}</span>
+                    <span class="legend-value">${data.count} (${percent}%)</span>
+                </div>
+            `;
+        }).join('');
     },
 
     search(query) {
@@ -93,6 +220,199 @@ const Grocery = {
         document.getElementById('lowStockGrocery').textContent = lowStock;
         document.getElementById('expiringGrocery').textContent = expiringSoon;
         document.getElementById('totalGroceryCost').textContent = Utils.formatCurrency(totalCost);
+    },
+
+    // Show detailed stats modal
+    showStatsModal() {
+        const content = document.getElementById('groceryStatsContent');
+        
+        // Calculate stats by category
+        const categoryStats = {
+            'pickles': { items: [], totalCost: 0, totalUsage: 0 },
+            'snacks': { items: [], totalCost: 0, totalUsage: 0 },
+            'other': { items: [], totalCost: 0, totalUsage: 0 }
+        };
+        
+        this.items.forEach(item => {
+            const cat = item.category || 'other';
+            if (categoryStats[cat]) {
+                categoryStats[cat].items.push(item);
+                categoryStats[cat].totalCost += item.cost || 0;
+            }
+        });
+        
+        // Calculate usage per item
+        const usageByItem = {};
+        this.usageHistory.forEach(usage => {
+            if (!usageByItem[usage.grocery_id]) {
+                usageByItem[usage.grocery_id] = { count: 0, totalQty: 0, purposes: new Set() };
+            }
+            usageByItem[usage.grocery_id].count++;
+            usageByItem[usage.grocery_id].totalQty += usage.quantity_used || 0;
+            if (usage.purpose) usageByItem[usage.grocery_id].purposes.add(usage.purpose);
+        });
+
+        // Calculate usage stats per category
+        this.items.forEach(item => {
+            const cat = item.category || 'other';
+            const usage = usageByItem[item.id];
+            if (usage && categoryStats[cat]) {
+                categoryStats[cat].totalUsage += usage.totalQty;
+            }
+        });
+
+        // Most used items
+        const mostUsedItems = this.items
+            .map(item => ({
+                ...item,
+                usage: usageByItem[item.id] || { count: 0, totalQty: 0, purposes: new Set() }
+            }))
+            .filter(item => item.usage.count > 0)
+            .sort((a, b) => b.usage.totalQty - a.usage.totalQty)
+            .slice(0, 10);
+
+        // Low stock items
+        const lowStockItems = this.items.filter(item => item.quantity <= 1);
+
+        // Expiring items
+        const expiringItems = this.items.filter(item => 
+            this.isExpiringSoon(item.expiry_date) || this.isExpired(item.expiry_date)
+        );
+
+        content.innerHTML = `
+            <div class="stats-grid">
+                <!-- Category Breakdown -->
+                <div class="stats-section">
+                    <h4><i class="fas fa-chart-pie"></i> Category Breakdown</h4>
+                    <div class="stats-cards">
+                        ${['pickles', 'snacks', 'other'].map(cat => `
+                            <div class="mini-stat-card" style="border-left: 4px solid ${this.chartColors[cat]}">
+                                <div class="mini-stat-header">
+                                    ${this.getCategoryEmoji(cat)} ${this.getCategoryLabel(cat)}
+                                </div>
+                                <div class="mini-stat-body">
+                                    <div class="mini-stat-row">
+                                        <span>Items:</span>
+                                        <strong>${categoryStats[cat].items.length}</strong>
+                                    </div>
+                                    <div class="mini-stat-row">
+                                        <span>Total Cost:</span>
+                                        <strong>${Utils.formatCurrency(categoryStats[cat].totalCost)}</strong>
+                                    </div>
+                                    <div class="mini-stat-row">
+                                        <span>Usage:</span>
+                                        <strong>${categoryStats[cat].totalUsage.toFixed(2)} units</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Most Used Items -->
+                <div class="stats-section">
+                    <h4><i class="fas fa-fire"></i> Most Used Items</h4>
+                    ${mostUsedItems.length > 0 ? `
+                        <table class="mini-stats-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Category</th>
+                                    <th>Times Used</th>
+                                    <th>Total Qty Used</th>
+                                    <th>Used For</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${mostUsedItems.map(item => `
+                                    <tr>
+                                        <td><strong>${item.item_name}</strong></td>
+                                        <td><span class="category-badge ${item.category}">${this.getCategoryLabel(item.category)}</span></td>
+                                        <td>${item.usage.count}x</td>
+                                        <td>${item.usage.totalQty.toFixed(2)} ${item.unit}</td>
+                                        <td>${Array.from(item.usage.purposes).slice(0, 3).join(', ') || 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    ` : '<p class="no-data">No usage recorded yet</p>'}
+                </div>
+
+                <!-- Alerts Section -->
+                <div class="stats-section alerts-section">
+                    <div class="alert-box warning">
+                        <h4><i class="fas fa-exclamation-triangle"></i> Low Stock (${lowStockItems.length})</h4>
+                        ${lowStockItems.length > 0 ? `
+                            <ul class="alert-list">
+                                ${lowStockItems.map(item => `
+                                    <li>${this.getCategoryEmoji(item.category)} ${item.item_name} - <strong>${item.quantity} ${item.unit}</strong> left</li>
+                                `).join('')}
+                            </ul>
+                        ` : '<p>All items well stocked!</p>'}
+                    </div>
+                    
+                    <div class="alert-box danger">
+                        <h4><i class="fas fa-calendar-times"></i> Expiring Soon (${expiringItems.length})</h4>
+                        ${expiringItems.length > 0 ? `
+                            <ul class="alert-list">
+                                ${expiringItems.map(item => `
+                                    <li class="${this.isExpired(item.expiry_date) ? 'expired' : ''}">
+                                        ${this.getCategoryEmoji(item.category)} ${item.item_name} - 
+                                        <strong>${this.isExpired(item.expiry_date) ? 'EXPIRED' : 'Expires'} ${Utils.formatDate(item.expiry_date)}</strong>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        ` : '<p>No items expiring soon!</p>'}
+                    </div>
+                </div>
+
+                <!-- Usage by Purpose -->
+                <div class="stats-section">
+                    <h4><i class="fas fa-clipboard-list"></i> Usage by Purpose</h4>
+                    ${this.getUsageByPurpose()}
+                </div>
+            </div>
+        `;
+
+        Modal.open('groceryStatsModal');
+    },
+
+    getUsageByPurpose() {
+        const purposeStats = {};
+        
+        this.usageHistory.forEach(usage => {
+            const purpose = usage.purpose || 'General Use';
+            if (!purposeStats[purpose]) {
+                purposeStats[purpose] = { count: 0, items: new Set() };
+            }
+            purposeStats[purpose].count++;
+            const item = this.items.find(i => i.id === usage.grocery_id);
+            if (item) purposeStats[purpose].items.add(item.item_name);
+        });
+
+        const purposes = Object.entries(purposeStats)
+            .sort((a, b) => b[1].count - a[1].count)
+            .slice(0, 10);
+
+        if (purposes.length === 0) {
+            return '<p class="no-data">No usage recorded yet</p>';
+        }
+
+        return `
+            <div class="purpose-stats">
+                ${purposes.map(([purpose, data]) => `
+                    <div class="purpose-item">
+                        <div class="purpose-header">
+                            <span class="purpose-name">${purpose}</span>
+                            <span class="purpose-count">${data.count} uses</span>
+                        </div>
+                        <div class="purpose-items">
+                            Items: ${Array.from(data.items).slice(0, 5).join(', ')}${data.items.size > 5 ? '...' : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
     },
 
     renderGrocery() {
