@@ -656,6 +656,29 @@ const Grocery = {
         }
     },
 
+    // Bulk import items
+    async bulkImport(items) {
+        let successCount = 0;
+        let failCount = 0;
+        
+        for (const item of items) {
+            try {
+                const result = await API.saveGrocery(item);
+                if (result.success) {
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } catch (e) {
+                failCount++;
+            }
+        }
+        
+        await this.refresh();
+        Toast.success('Import Complete', `Added ${successCount} items${failCount > 0 ? `, ${failCount} failed` : ''}`);
+        return { successCount, failCount };
+    },
+
     viewDetails(itemId) {
         const item = this.items.find(i => i.id === itemId);
         if (!item) return;
