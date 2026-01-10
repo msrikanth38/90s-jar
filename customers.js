@@ -336,7 +336,7 @@ const History = {
                 <td>${Utils.formatDateTime(order.delivered_at || order.deliveredAt)}</td>
                 <td class="history-actions">
                     <button class="btn-icon success" onclick="History.repeatOrder('${order.id}')" title="Repeat Order"><i class="fas fa-redo"></i></button>
-                    <button class="btn-icon" onclick="History.viewLabels('${order.id}')" title="View Labels"><i class="fas fa-tag"></i></button>
+                    <button class="btn-icon" onclick="History.viewLabels('${order.id}')" title="Print Receipt"><i class="fas fa-receipt"></i></button>
                     <button class="btn-icon" onclick="History.viewDetails('${order.id}')" title="View Details"><i class="fas fa-eye"></i></button>
                     <button class="btn-icon danger" onclick="History.deleteRecord('${order.id}')" title="Delete"><i class="fas fa-trash"></i></button>
                 </td>
@@ -392,7 +392,7 @@ const History = {
                             <i class="fas fa-redo"></i> Repeat Order
                         </button>
                         <button class="btn btn-primary" onclick="History.viewLabels('${order.id}')">
-                            <i class="fas fa-tag"></i> Print Labels
+                            <i class="fas fa-receipt"></i> Print Receipt
                         </button>
                     </div>
                 </div>
@@ -407,99 +407,329 @@ const History = {
         const order = DataStore.orderHistory.find(o => o.id === orderId);
         if (!order) return;
 
-        const customer = {
-            name: order.customer_name || order.customerName,
-            phone: order.customer_phone || order.customerPhone
-        };
-
-        // Generate labels for all items
-        const labelsHtml = (order.items || []).map(item => {
-            if (item.isCombo && item.comboItems) {
-                return item.comboItems.map(comboItem => {
-                    const invItem = DataStore.inventory.find(i => i.id === comboItem.itemId);
-                    const category = invItem?.category === 'pickles' ? '🥒 Homemade Pickle' : '🍪 Homemade Snack';
-                    return this.createLabelHtml(comboItem.name, category, item.price / item.comboItems.length, 1, customer, order.delivered_at || order.deliveredAt);
-                }).join('');
-            } else {
-                const invItem = DataStore.inventory.find(i => i.id === item.itemId);
-                const category = invItem?.category === 'pickles' ? '🥒 Homemade Pickle' : '🍪 Homemade Snack';
-                return this.createLabelHtml(item.name, category, item.price, item.quantity, customer, order.delivered_at || order.deliveredAt);
-            }
+        const orderIdStr = order.order_id || order.orderId;
+        const customerName = order.customer_name || order.customerName;
+        const customerPhone = order.customer_phone || order.customerPhone || '';
+        const customerAddress = order.customer_address || order.customerAddress || '';
+        const deliveredDate = Utils.formatDate(order.delivered_at || order.deliveredAt);
+        
+        // Build items list HTML
+        const itemsHtml = (order.items || []).map(item => {
+            const invItem = DataStore.inventory.find(i => i.id === item.itemId);
+            const category = invItem?.category === 'pickles' ? '🥒 Pickle' : '🍪 Snack';
+            const weightText = item.weightDisplay ? ` (${item.weightDisplay})` : '';
+            return `
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">
+                        <div style="font-weight: 600;">${item.isCombo ? '📦 ' : ''}${item.name}${weightText}</div>
+                        <div style="font-size: 11px; color: #888;">${category}</div>
+                    </td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">${item.quantity}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">$${item.price.toFixed(2)}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; font-weight: 600;">$${(item.total || item.price * item.quantity).toFixed(2)}</td>
+                </tr>
+            `;
         }).join('');
+        
+        // Calculate totals
+        const totalItems = (order.items || []).reduce((sum, item) => sum + item.quantity, 0);
+        const totalWeightGrams = (order.items || []).reduce((sum, item) => sum + (item.weight || 0), 0);
+        const totalWeightText = totalWeightGrams > 0 ? `${(totalWeightGrams / 1000).toFixed(2)} kg` : '';
+        
+        // QR Code data
+        const qrData = encodeURIComponent(JSON.stringify({
+            order: orderIdStr,
+            customer: customerName,
+            phone: customerPhone,
+            total: order.total,
+            items: (order.items || []).map(i => ({ name: i.name, qty: i.quantity, price: i.total || i.price * i.quantity })),
+            date: deliveredDate
+        }));
+        
+        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${qrData}`;
 
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
             <html>
             <head>
-                <title>Labels - ${order.order_id || order.orderId}</title>
+                <title>Receipt - ${orderIdStr}</title>
                 <style>
-                    @page { size: 4in 3in; margin: 0.2in; }
-                    body { font-family: 'Segoe UI', Arial, sans-serif; padding: 10px; margin: 0; }
-                    .labels-grid { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
-                    .label-preview { 
-                        border: 2px solid #8B4513; border-radius: 12px; padding: 15px; 
-                        width: 280px; text-align: center; background: #fff; page-break-inside: avoid;
+                    @page { size: 4in auto; margin: 0.3in; }
+                    * { box-sizing: border-box; }
+                    body { 
+                        font-family: 'Segoe UI', Arial, sans-serif; 
+                        padding: 0; 
+                        margin: 0;
+                        background: #f5f5f5;
                     }
-                    .label-logo { font-size: 22px; font-weight: bold; color: #8B4513; font-family: Georgia, serif; }
-                    .label-tagline { font-size: 10px; color: #666; text-transform: uppercase; }
-                    .label-divider { height: 1px; background: linear-gradient(to right, transparent, #ccc, transparent); margin: 8px 0; }
-                    .product-name { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 4px; }
-                    .product-category { font-size: 11px; color: #666; }
-                    .label-details { background: #f8f8f8; border-radius: 8px; padding: 8px; margin: 8px 0; }
-                    .detail-row { display: flex; justify-content: center; align-items: center; gap: 10px; }
-                    .detail-price { font-size: 16px; color: #2E7D32; font-weight: bold; }
-                    .label-customer { background: #fff3e0; border-radius: 8px; padding: 8px; margin: 6px 0; }
-                    .customer-title { font-size: 9px; color: #888; text-transform: uppercase; }
-                    .customer-name { font-size: 12px; font-weight: bold; }
-                    .customer-phone { font-size: 11px; color: #666; }
-                    .label-date { font-size: 10px; color: #888; margin-top: 4px; }
-                    .footer-contact { font-size: 10px; color: #666; }
-                    .footer-love { font-size: 9px; color: #e91e63; }
-                    @media print { .label-preview { box-shadow: none; } }
+                    .receipt {
+                        max-width: 380px;
+                        margin: 20px auto;
+                        background: #fff;
+                        border: 2px solid #8B4513;
+                        border-radius: 15px;
+                        overflow: hidden;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                    }
+                    .receipt-header {
+                        background: linear-gradient(135deg, #8B4513 0%, #A0522D 100%);
+                        color: white;
+                        padding: 20px;
+                        text-align: center;
+                    }
+                    .receipt-logo {
+                        font-size: 28px;
+                        font-weight: bold;
+                        font-family: Georgia, serif;
+                        margin-bottom: 5px;
+                    }
+                    .receipt-tagline {
+                        font-size: 11px;
+                        opacity: 0.9;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                    }
+                    .receipt-body {
+                        padding: 20px;
+                    }
+                    .order-info {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding-bottom: 15px;
+                        border-bottom: 2px dashed #ddd;
+                        margin-bottom: 15px;
+                    }
+                    .order-number {
+                        font-size: 14px;
+                        font-weight: bold;
+                        color: #8B4513;
+                    }
+                    .order-date {
+                        font-size: 12px;
+                        color: #666;
+                    }
+                    .customer-section {
+                        background: #FFF8E7;
+                        border-radius: 10px;
+                        padding: 12px 15px;
+                        margin-bottom: 15px;
+                    }
+                    .customer-label {
+                        font-size: 10px;
+                        color: #888;
+                        text-transform: uppercase;
+                        margin-bottom: 5px;
+                    }
+                    .customer-name {
+                        font-size: 16px;
+                        font-weight: bold;
+                        color: #333;
+                    }
+                    .customer-phone {
+                        font-size: 13px;
+                        color: #666;
+                        margin-top: 3px;
+                    }
+                    .customer-address {
+                        font-size: 12px;
+                        color: #666;
+                        margin-top: 3px;
+                    }
+                    .items-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        font-size: 13px;
+                        margin-bottom: 15px;
+                    }
+                    .items-table th {
+                        background: #f8f8f8;
+                        padding: 10px 8px;
+                        text-align: left;
+                        font-size: 11px;
+                        text-transform: uppercase;
+                        color: #666;
+                        border-bottom: 2px solid #8B4513;
+                    }
+                    .items-table th:nth-child(2),
+                    .items-table th:nth-child(3),
+                    .items-table th:nth-child(4) {
+                        text-align: center;
+                    }
+                    .items-table th:last-child {
+                        text-align: right;
+                    }
+                    .totals-section {
+                        border-top: 2px dashed #ddd;
+                        padding-top: 15px;
+                    }
+                    .total-row {
+                        display: flex;
+                        justify-content: space-between;
+                        padding: 5px 0;
+                        font-size: 13px;
+                    }
+                    .total-row.subtotal {
+                        color: #666;
+                    }
+                    .total-row.discount {
+                        color: #e74c3c;
+                    }
+                    .total-row.grand-total {
+                        font-size: 18px;
+                        font-weight: bold;
+                        color: #2E7D32;
+                        border-top: 2px solid #8B4513;
+                        padding-top: 10px;
+                        margin-top: 10px;
+                    }
+                    .qr-section {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 15px;
+                        padding: 15px;
+                        border-top: 2px dashed #ddd;
+                        margin-top: 15px;
+                    }
+                    .qr-code img {
+                        width: 80px;
+                        height: 80px;
+                        border: 2px solid #8B4513;
+                        border-radius: 8px;
+                        padding: 3px;
+                        background: white;
+                    }
+                    .qr-info {
+                        text-align: left;
+                    }
+                    .qr-info-title {
+                        font-size: 11px;
+                        color: #888;
+                        text-transform: uppercase;
+                    }
+                    .qr-info-text {
+                        font-size: 10px;
+                        color: #666;
+                        margin-top: 3px;
+                    }
+                    .receipt-footer {
+                        background: #FFF8E7;
+                        padding: 15px;
+                        text-align: center;
+                        border-top: 2px solid #8B4513;
+                    }
+                    .footer-contact {
+                        font-size: 13px;
+                        color: #8B4513;
+                        font-weight: 600;
+                        margin-bottom: 5px;
+                    }
+                    .footer-love {
+                        font-size: 11px;
+                        color: #e91e63;
+                    }
+                    .footer-thanks {
+                        font-size: 12px;
+                        color: #666;
+                        margin-top: 8px;
+                    }
+                    .delivered-date {
+                        font-size: 11px;
+                        color: #888;
+                        margin-top: 10px;
+                    }
+                    @media print { 
+                        body { background: white; }
+                        .receipt { 
+                            box-shadow: none; 
+                            margin: 0;
+                            max-width: 100%;
+                        }
+                    }
                 </style>
             </head>
             <body>
-                <div class="labels-grid">${labelsHtml}</div>
+                <div class="receipt">
+                    <div class="receipt-header">
+                        <div class="receipt-logo">🏺 90's JAR</div>
+                        <div class="receipt-tagline">Homemade Sankranti Snacks & Pickles</div>
+                    </div>
+                    
+                    <div class="receipt-body">
+                        <div class="order-info">
+                            <div class="order-number">Order #${orderIdStr}</div>
+                            <div class="order-date">${deliveredDate}</div>
+                        </div>
+                        
+                        <div class="customer-section">
+                            <div class="customer-label">📦 Packed For</div>
+                            <div class="customer-name">${customerName}</div>
+                            ${customerPhone ? `<div class="customer-phone">📞 ${customerPhone}</div>` : ''}
+                            ${customerAddress ? `<div class="customer-address">📍 ${customerAddress}</div>` : ''}
+                        </div>
+                        
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itemsHtml}
+                            </tbody>
+                        </table>
+                        
+                        <div class="totals-section">
+                            <div class="total-row subtotal">
+                                <span>Subtotal (${totalItems} items)</span>
+                                <span>$${(order.subtotal || order.total).toFixed(2)}</span>
+                            </div>
+                            ${order.discount ? `
+                            <div class="total-row discount">
+                                <span>Discount</span>
+                                <span>-$${order.discount.toFixed(2)}</span>
+                            </div>
+                            ` : ''}
+                            ${totalWeightText ? `
+                            <div class="total-row">
+                                <span>Total Weight</span>
+                                <span>${totalWeightText}</span>
+                            </div>
+                            ` : ''}
+                            <div class="total-row grand-total">
+                                <span>TOTAL</span>
+                                <span>$${order.total.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="qr-section">
+                            <div class="qr-code">
+                                <img src="${qrCodeUrl}" alt="QR Code" />
+                            </div>
+                            <div class="qr-info">
+                                <div class="qr-info-title">Scan for Details</div>
+                                <div class="qr-info-text">Order: ${orderIdStr}</div>
+                                <div class="qr-info-text">Total: $${order.total.toFixed(2)}</div>
+                                <div class="qr-info-text">Items: ${totalItems}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="receipt-footer">
+                        <div class="footer-contact">📞 +1 6822742570</div>
+                        <div class="footer-love">Made with ❤️ in USA</div>
+                        <div class="footer-thanks">🙏 Thank you for your order!</div>
+                        <div class="delivered-date">Delivered: ${deliveredDate}</div>
+                    </div>
+                </div>
                 <script>setTimeout(() => window.print(), 500);</script>
             </body>
             </html>
         `);
-    },
-
-    createLabelHtml(name, category, price, qty, customer, deliveredDate) {
-        return `
-            <div class="label-preview">
-                <div class="label-header">
-                    <div class="label-logo">90's JAR</div>
-                    <div class="label-tagline">Homemade Sankranti Snacks</div>
-                </div>
-                <div class="label-divider"></div>
-                <div class="label-product">
-                    <div class="product-name">${name}</div>
-                    <div class="product-category">${category}</div>
-                </div>
-                <div class="label-details">
-                    <div class="detail-row">
-                        <span><strong>Qty:</strong> ${qty}</span>
-                        <span class="detail-price"><strong>${Utils.formatCurrency(price)}</strong></span>
-                    </div>
-                </div>
-                ${customer ? `
-                <div class="label-divider"></div>
-                <div class="label-customer">
-                    <div class="customer-title">📦 Packed For:</div>
-                    <div class="customer-name">${customer.name}</div>
-                    ${customer.phone ? `<div class="customer-phone">📞 ${customer.phone}</div>` : ''}
-                </div>
-                ` : ''}
-                <div class="label-divider"></div>
-                <div class="label-footer">
-                    <div class="footer-contact">📞 +1 6822742570</div>
-                    <div class="footer-love">Made with ❤️ in USA</div>
-                    ${deliveredDate ? `<div class="label-date">Delivered: ${Utils.formatDate(deliveredDate)}</div>` : ''}
-                </div>
-            </div>
-        `;
     },
 
     async deleteRecord(orderId) {
