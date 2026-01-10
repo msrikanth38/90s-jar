@@ -442,7 +442,7 @@ const Grocery = {
         if (items.length === 0) {
             container.innerHTML = `
                 <tr>
-                    <td colspan="9" class="empty-cell">
+                    <td colspan="10" class="empty-cell">
                         <div class="empty-state">
                             <i class="fas fa-shopping-basket"></i>
                             <h3>${this.searchQuery || this.categoryFilter !== 'all' ? 'No Items Found' : 'No Grocery Items'}</h3>
@@ -486,11 +486,12 @@ const Grocery = {
                     </td>
                     <td><span class="category-badge ${item.category}">${this.getCategoryLabel(item.category)}</span></td>
                     <td><strong>${item.quantity} ${item.unit || 'kg'}</strong></td>
+                    <td>${Utils.formatCurrency(item.cost || 0)}</td>
+                    <td>${item.supplier || 'N/A'}</td>
                     <td>${item.purchase_date ? Utils.formatDate(item.purchase_date) : 'N/A'}</td>
-                    <td class="${isExpired ? 'text-danger' : isExpiring ? 'text-warning' : ''}">${item.expiry_date ? Utils.formatDate(item.expiry_date) : 'N/A'}</td>
                     <td>${item.purchased_by || 'N/A'}</td>
                     <td>${item.location || 'N/A'}</td>
-                    <td>${Utils.formatCurrency(item.cost || 0)}</td>
+                    <td class="notes-cell">${item.notes || '-'}</td>
                     <td class="grocery-actions">
                         <button class="btn-icon" onclick="Grocery.viewDetails('${item.id}')" title="View Details"><i class="fas fa-eye"></i></button>
                         <button class="btn-icon" onclick="Grocery.quickUse('${item.id}')" title="Record Usage"><i class="fas fa-clipboard-list"></i></button>
