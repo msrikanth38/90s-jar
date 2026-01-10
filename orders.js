@@ -566,13 +566,15 @@ const Orders = {
         const select = document.getElementById('orderComboSelect');
         const comboType = select.value;
 
+        console.log('Selected combo type:', comboType); // Debug log
+
         if (!comboType) {
-            Toast.warning('Select Combo', 'Please select a combo type');
+            Toast.warning('Select Combo', 'Please select a combo type first');
             return;
         }
 
         this.openComboSelector(comboType);
-        select.value = '';
+        select.value = ''; // Reset after opening
     },
 
     removeOrderItem(index) {

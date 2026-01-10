@@ -737,16 +737,14 @@
                             <div class="add-item-header">
                                 <i class="fas fa-gift"></i>
                                 <span>Add Combo Deal</span>
-                                <span class="hint">Select items for special combo pricing</span>
+                                <span class="hint">Choose a combo and select items</span>
                             </div>
-                            <div class="combo-inputs">
-                                <select id="orderComboSelect" class="form-control">
-                                    <option value="">Choose Combo Type...</option>
-                                    <option value="4-combo">🎁 Any 4 Items - $22</option>
-                                    <option value="2-combo">🎁 Any 2 Items - $15</option>
-                                </select>
-                                <button class="btn btn-secondary add-combo-btn" onclick="Orders.addComboToOrder()">
-                                    <i class="fas fa-gift"></i> Select Items
+                            <div class="combo-inputs combo-buttons">
+                                <button class="btn btn-combo" onclick="Orders.openComboSelector('4-combo')">
+                                    <i class="fas fa-gift"></i> 4 Items - $22
+                                </button>
+                                <button class="btn btn-combo" onclick="Orders.openComboSelector('2-combo')">
+                                    <i class="fas fa-gift"></i> 2 Items - $15
                                 </button>
                             </div>
                         </div>
