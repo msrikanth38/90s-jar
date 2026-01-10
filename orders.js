@@ -436,7 +436,7 @@ const Orders = {
             <label class="combo-item-checkbox">
                 <input type="checkbox" name="comboItem" value="${item.id}" data-name="${item.name}">
                 <span class="checkbox-label">${item.name}</span>
-                <span class="checkbox-stock">${item.quantity} in stock</span>
+                <span class="checkbox-stock">${item.stock || 0} in stock</span>
             </label>
         `).join('');
         
