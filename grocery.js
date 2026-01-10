@@ -630,9 +630,23 @@ const Grocery = {
         const result = await API.saveGrocery(item);
 
         if (result.success) {
+            // If new item (not editing) and has cost, create expense transaction
+            if (!id && cost > 0) {
+                const transaction = {
+                    type: 'expense',
+                    category: 'grocery',
+                    amount: cost,
+                    date: purchaseDate || new Date().toISOString().split('T')[0],
+                    description: `Grocery: ${itemName} from ${supplier || 'Unknown'}`
+                };
+                await API.saveTransaction(transaction);
+            }
+            
             Toast.success('Saved', `${itemName} has been saved`);
             Modal.close('groceryModal');
+            await DataStore.loadAll(); // Refresh all data including transactions
             await this.refresh();
+            Dashboard.refresh(); // Update dashboard expenses
         } else {
             Toast.error('Error', 'Failed to save item');
         }
@@ -666,6 +680,18 @@ const Grocery = {
                 const result = await API.saveGrocery(item);
                 if (result.success) {
                     successCount++;
+                    
+                    // Also create expense transaction if has cost
+                    if (item.cost > 0) {
+                        const transaction = {
+                            type: 'expense',
+                            category: 'grocery',
+                            amount: item.cost,
+                            date: item.purchase_date || new Date().toISOString().split('T')[0],
+                            description: `Grocery: ${item.item_name} from ${item.supplier || 'Unknown'}`
+                        };
+                        await API.saveTransaction(transaction);
+                    }
                 } else {
                     failCount++;
                 }
@@ -674,7 +700,9 @@ const Grocery = {
             }
         }
         
+        await DataStore.loadAll(); // Refresh all data including transactions
         await this.refresh();
+        Dashboard.refresh(); // Update dashboard
         Toast.success('Import Complete', `Added ${successCount} items${failCount > 0 ? `, ${failCount} failed` : ''}`);
         return { successCount, failCount };
     },

@@ -116,8 +116,8 @@ const Dashboard = {
         const todayIncome = todayDelivered.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
         document.getElementById('todayRevenue').textContent = Utils.formatCurrency(todayIncome);
 
-        // Today's Expenses = Expenses from Finance/Transactions tab for today
-        const todayExpenses = DataStore.transactions
+        // Today's Expenses = Finance transactions + Grocery purchases for today
+        const todayTransactionExpenses = DataStore.transactions
             .filter(t => {
                 const isExpense = t.type === 'expense';
                 const transDate = t.date || t.created_at || t.createdAt;
@@ -125,6 +125,16 @@ const Dashboard = {
                 return isExpense && isToday;
             })
             .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+        
+        // Add grocery purchases for today
+        const todayGroceryExpenses = (DataStore.grocery || [])
+            .filter(g => {
+                const purchaseDate = g.purchase_date || g.purchaseDate;
+                return purchaseDate && new Date(purchaseDate).toDateString() === today;
+            })
+            .reduce((sum, g) => sum + (parseFloat(g.cost) || 0), 0);
+        
+        const todayExpenses = todayTransactionExpenses + todayGroceryExpenses;
         document.getElementById('todayExpenses').textContent = Utils.formatCurrency(todayExpenses);
 
         // Today's Profit = Income - Expenses
