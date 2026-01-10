@@ -769,8 +769,11 @@
                             <div class="total-row discount-row">
                                 <span>Discount:</span>
                                 <div class="discount-input-group">
-                                    <span>$</span>
-                                    <input type="number" id="orderDiscountInput" class="form-control" value="0" min="0" step="0.01" onchange="Orders.updateOrderSummary()">
+                                    <div class="discount-type-toggle">
+                                        <button type="button" id="discountTypeDollar" class="discount-type-btn active" onclick="Orders.setDiscountType('$')">$</button>
+                                        <button type="button" id="discountTypePercent" class="discount-type-btn" onclick="Orders.setDiscountType('%')">%</button>
+                                    </div>
+                                    <input type="number" id="orderDiscountInput" class="form-control" value="0" min="0" step="0.01" onchange="Orders.updateOrderSummary()" placeholder="0">
                                 </div>
                                 <span id="orderDiscount">$0.00</span>
                             </div>

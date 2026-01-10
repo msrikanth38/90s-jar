@@ -1,6 +1,7 @@
 // ===== Orders Module =====
 const Orders = {
     currentOrder: { items: [], subtotal: 0, discount: 0, total: 0 },
+    discountType: '$', // '$' for dollar amount, '%' for percentage
     editingOrderId: null,
     viewingOrderId: null,
     searchQuery: '',
@@ -616,7 +617,16 @@ const Orders = {
         }).join('');
 
         this.currentOrder.subtotal = this.currentOrder.items.reduce((sum, item) => sum + item.total, 0);
-        this.currentOrder.discount = parseFloat(document.getElementById('orderDiscountInput')?.value) || 0;
+        
+        // Calculate discount based on type ($ or %)
+        const discountInput = parseFloat(document.getElementById('orderDiscountInput')?.value) || 0;
+        if (this.discountType === '%') {
+            this.currentOrder.discount = (this.currentOrder.subtotal * discountInput) / 100;
+            this.currentOrder.discountPercent = discountInput; // Store for display
+        } else {
+            this.currentOrder.discount = discountInput;
+            this.currentOrder.discountPercent = null;
+        }
         this.currentOrder.total = this.currentOrder.subtotal - this.currentOrder.discount;
 
         // Calculate total weight
@@ -627,6 +637,25 @@ const Orders = {
         document.getElementById('orderDiscount').textContent = Utils.formatCurrency(this.currentOrder.discount);
         document.getElementById('orderTotal').textContent = Utils.formatCurrency(this.currentOrder.total);
         document.getElementById('orderTotalWeight').textContent = this.formatWeight(totalWeightGrams);
+    },
+
+    setDiscountType(type) {
+        this.discountType = type;
+        
+        // Update button states
+        const dollarBtn = document.getElementById('discountTypeDollar');
+        const percentBtn = document.getElementById('discountTypePercent');
+        
+        if (type === '$') {
+            dollarBtn.classList.add('active');
+            percentBtn.classList.remove('active');
+        } else {
+            dollarBtn.classList.remove('active');
+            percentBtn.classList.add('active');
+        }
+        
+        // Recalculate with new type
+        this.updateOrderSummary();
     },
 
     async saveOrder() {
@@ -701,6 +730,8 @@ const Orders = {
         document.getElementById('orderDeadline').value = '';
         if (document.getElementById('orderNotes')) document.getElementById('orderNotes').value = '';
         if (document.getElementById('orderDiscountInput')) document.getElementById('orderDiscountInput').value = '0';
+        this.discountType = '$';
+        this.setDiscountType('$'); // Reset toggle buttons
         this.updateOrderSummary();
     },
 

@@ -2280,13 +2280,45 @@ textarea.form-control {
 .discount-input-group {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
+}
+
+.discount-type-toggle {
+    display: flex;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.discount-type-btn {
+    padding: 6px 12px;
+    border: none;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.discount-type-btn:first-child {
+    border-right: 1px solid var(--border-color);
+}
+
+.discount-type-btn:hover {
+    background: var(--bg-tertiary);
+}
+
+.discount-type-btn.active {
+    background: var(--primary);
+    color: white;
 }
 
 .discount-input-group input {
-    width: 80px;
-    padding: 5px;
+    width: 70px;
+    padding: 6px 8px;
     text-align: center;
+    border-radius: 6px;
 }
 
 .grand-total {
