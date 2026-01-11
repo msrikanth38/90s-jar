@@ -400,6 +400,7 @@ body {
 .stat-card.expense .stat-icon { background: linear-gradient(135deg, #fa709a, #fee140); }
 .stat-card.profit .stat-icon { background: linear-gradient(135deg, #4facfe, #00f2fe); }
 .stat-card.stock .stat-icon { background: linear-gradient(135deg, #ff9a9e, #fecfef); }
+.stat-card.completed .stat-icon { background: linear-gradient(135deg, #2E7D32, #43a047); }
 
 .stat-info {
     display: flex;

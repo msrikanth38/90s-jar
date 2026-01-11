@@ -121,6 +121,14 @@
                         <span class="stat-hint">Click to view</span>
                     </div>
                 </div>
+                <div class="stat-card completed clickable" onclick="Dashboard.showCompletedOrders()">
+                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="completedOrders">0</span>
+                        <span class="stat-label">Completed</span>
+                        <span class="stat-hint">All History</span>
+                    </div>
+                </div>
                 <div class="stat-card revenue clickable" onclick="Dashboard.showIncomeBreakdown()">
                     <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
                     <div class="stat-info">
@@ -134,7 +142,7 @@
                     <div class="stat-info">
                         <span class="stat-value" id="todayExpenses">$0.00</span>
                         <span class="stat-label">Today's Expenses</span>
-                        <span class="stat-hint">Daily / Weekly / Monthly</span>
+                        <span class="stat-hint">Grocery + Finance</span>
                     </div>
                 </div>
                 <div class="stat-card profit clickable" onclick="Dashboard.showProfitBreakdown()">

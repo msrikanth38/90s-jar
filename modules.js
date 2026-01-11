@@ -75,6 +75,8 @@ const Modal = {
 
 // ===== Dashboard Module =====
 const Dashboard = {
+    TIMEZONE: 'America/Chicago', // Texas CST
+    
     async refresh() {
         this.updateStats();
         this.updateSummaryCards();
@@ -84,54 +86,102 @@ const Dashboard = {
         this.renderRecentCustomers();
     },
 
-    // Helper to get date ranges
+    // Get today's date string in Texas CST
+    getTodayCST() {
+        return new Date().toLocaleDateString('en-US', { timeZone: this.TIMEZONE });
+    },
+    
+    // Convert any date to Texas CST date string for comparison
+    toTexasDateString(dateStr) {
+        if (!dateStr) return null;
+        const date = new Date(dateStr);
+        if (isNaN(date)) return null;
+        return date.toLocaleDateString('en-US', { timeZone: this.TIMEZONE });
+    },
+    
+    // Get date ranges in CST
     getDateRanges() {
-        const now = new Date();
+        // Get current Texas time
+        const nowStr = new Date().toLocaleString('en-US', { timeZone: this.TIMEZONE });
+        const now = new Date(nowStr);
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const weekStart = new Date(today);
         weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         
-        return { today, weekStart, monthStart };
+        return { today, weekStart, monthStart, now };
     },
 
-    // Calculate income for a date range
+    // Check if a date string falls on a specific day (in CST)
+    isOnDate(dateStr, targetDate) {
+        const dateCST = this.toTexasDateString(dateStr);
+        const targetCST = targetDate.toLocaleDateString('en-US', { timeZone: this.TIMEZONE });
+        return dateCST === targetCST;
+    },
+    
+    // Check if date is in range (CST)
+    isInRange(dateStr, startDate, endDate) {
+        if (!dateStr) return false;
+        const date = new Date(dateStr);
+        if (isNaN(date)) return false;
+        return date >= startDate && date <= endDate;
+    },
+
+    // Calculate income for a date range - from order history (completed orders)
     getIncome(startDate, endDate = null) {
         return DataStore.orderHistory
             .filter(o => {
-                const deliveredDate = new Date(o.delivered_at || o.deliveredAt || o.created_at);
-                if (!deliveredDate || isNaN(deliveredDate)) return false;
+                const deliveredDate = o.delivered_at || o.deliveredAt || o.created_at || o.createdAt;
+                if (!deliveredDate) return false;
                 if (endDate) {
-                    return deliveredDate >= startDate && deliveredDate <= endDate;
+                    return this.isInRange(deliveredDate, startDate, endDate);
                 }
-                return deliveredDate.toDateString() === startDate.toDateString();
+                return this.isOnDate(deliveredDate, startDate);
             })
             .reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
     },
 
     // Calculate expenses for a date range (transactions + grocery)
     getExpenses(startDate, endDate = null) {
-        const transExpenses = DataStore.transactions
+        // Transaction expenses
+        const transExpenses = (DataStore.transactions || [])
             .filter(t => {
                 if (t.type !== 'expense') return false;
-                const transDate = new Date(t.date || t.created_at || t.createdAt);
-                if (!transDate || isNaN(transDate)) return false;
+                const transDate = t.date || t.created_at || t.createdAt;
+                if (!transDate) return false;
                 if (endDate) {
-                    return transDate >= startDate && transDate <= endDate;
+                    return this.isInRange(transDate, startDate, endDate);
                 }
-                return transDate.toDateString() === startDate.toDateString();
+                return this.isOnDate(transDate, startDate);
             })
             .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
         
+        // Grocery expenses - THIS IS THE MAIN EXPENSE SOURCE
         const groceryExpenses = (DataStore.grocery || [])
             .filter(g => {
-                const purchaseDate = new Date(g.purchase_date || g.purchaseDate);
-                if (!purchaseDate || isNaN(purchaseDate)) return false;
+                const purchaseDate = g.purchase_date || g.purchaseDate;
+                if (!purchaseDate) return false;
                 if (endDate) {
-                    return purchaseDate >= startDate && purchaseDate <= endDate;
+                    return this.isInRange(purchaseDate, startDate, endDate);
                 }
-                return purchaseDate.toDateString() === startDate.toDateString();
+                return this.isOnDate(purchaseDate, startDate);
             })
+            .reduce((sum, g) => sum + (parseFloat(g.cost) || 0), 0);
+        
+        return transExpenses + groceryExpenses;
+    },
+    
+    // Get all-time totals (no date filtering)
+    getAllTimeIncome() {
+        return DataStore.orderHistory.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+    },
+    
+    getAllTimeExpenses() {
+        const transExpenses = (DataStore.transactions || [])
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+        
+        const groceryExpenses = (DataStore.grocery || [])
             .reduce((sum, g) => sum + (parseFloat(g.cost) || 0), 0);
         
         return transExpenses + groceryExpenses;
@@ -139,8 +189,7 @@ const Dashboard = {
 
     // Update the quick summary cards (weekly, monthly, all-time)
     updateSummaryCards() {
-        const { today, weekStart, monthStart } = this.getDateRanges();
-        const now = new Date();
+        const { today, weekStart, monthStart, now } = this.getDateRanges();
         
         // Weekly
         const weeklyIncome = this.getIncome(weekStart, now);
@@ -165,13 +214,8 @@ const Dashboard = {
         monthlyProfitEl.parentElement.className = `summary-profit ${monthlyProfit >= 0 ? 'positive' : 'negative'}`;
         
         // All Time
-        const allTimeIncome = DataStore.orderHistory.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
-        const allTimeTransExpense = DataStore.transactions
-            .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-        const allTimeGroceryExpense = (DataStore.grocery || [])
-            .reduce((sum, g) => sum + (parseFloat(g.cost) || 0), 0);
-        const allTimeExpense = allTimeTransExpense + allTimeGroceryExpense;
+        const allTimeIncome = this.getAllTimeIncome();
+        const allTimeExpense = this.getAllTimeExpenses();
         const allTimeProfit = allTimeIncome - allTimeExpense;
         
         document.getElementById('allTimeIncome').textContent = Utils.formatCurrency(allTimeIncome);
@@ -182,17 +226,18 @@ const Dashboard = {
     },
 
     updateStats() {
-        const today = new Date().toDateString();
+        const todayCST = this.getTodayCST();
+        const { today } = this.getDateRanges();
         
-        // Today's Orders = Orders created today (both active and completed)
+        // Today's Orders = Orders created today (both active and completed) - CST
         const todayActiveOrders = DataStore.orders.filter(o => {
             const createdDate = o.created_at || o.createdAt;
-            return createdDate && new Date(createdDate).toDateString() === today;
+            return this.toTexasDateString(createdDate) === todayCST;
         });
         
         const todayCompletedOrders = DataStore.orderHistory.filter(o => {
             const createdDate = o.created_at || o.createdAt;
-            return createdDate && new Date(createdDate).toDateString() === today;
+            return this.toTexasDateString(createdDate) === todayCST;
         });
         
         const totalTodayOrders = todayActiveOrders.length + todayCompletedOrders.length;
@@ -205,34 +250,17 @@ const Dashboard = {
         document.getElementById('pendingOrders').textContent = pendingOrders.length;
         const pendingBadge = document.getElementById('pendingOrdersBadge');
         if (pendingBadge) pendingBadge.textContent = pendingOrders.length;
+        
+        // Completed Orders = Total from history (never deleted)
+        const completedEl = document.getElementById('completedOrders');
+        if (completedEl) completedEl.textContent = DataStore.orderHistory.length;
 
-        // Today's Income = Completed orders delivered TODAY (from history)
-        const todayDelivered = DataStore.orderHistory.filter(o => {
-            const deliveredDate = o.delivered_at || o.deliveredAt;
-            return deliveredDate && new Date(deliveredDate).toDateString() === today;
-        });
-        const todayIncome = todayDelivered.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+        // Today's Income = Completed orders delivered TODAY in CST
+        const todayIncome = this.getIncome(today);
         document.getElementById('todayRevenue').textContent = Utils.formatCurrency(todayIncome);
 
-        // Today's Expenses = Finance transactions + Grocery purchases for today
-        const todayTransactionExpenses = DataStore.transactions
-            .filter(t => {
-                const isExpense = t.type === 'expense';
-                const transDate = t.date || t.created_at || t.createdAt;
-                const isToday = transDate && new Date(transDate).toDateString() === today;
-                return isExpense && isToday;
-            })
-            .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-        
-        // Add grocery purchases for today
-        const todayGroceryExpenses = (DataStore.grocery || [])
-            .filter(g => {
-                const purchaseDate = g.purchase_date || g.purchaseDate;
-                return purchaseDate && new Date(purchaseDate).toDateString() === today;
-            })
-            .reduce((sum, g) => sum + (parseFloat(g.cost) || 0), 0);
-        
-        const todayExpenses = todayTransactionExpenses + todayGroceryExpenses;
+        // Today's Expenses = Grocery purchases + Finance transactions for today (CST)
+        const todayExpenses = this.getExpenses(today);
         document.getElementById('todayExpenses').textContent = Utils.formatCurrency(todayExpenses);
 
         // Today's Profit = Income - Expenses
@@ -242,18 +270,14 @@ const Dashboard = {
         profitEl.className = `stat-value ${todayProfit >= 0 ? 'profit-positive' : 'profit-negative'}`;
 
         // Low Stock = Inventory items + Grocery items below threshold
-        const lowStockThreshold = DataStore.settings.lowStockThreshold || 5;
-        const lowStockInventory = DataStore.inventory.filter(i => 
+        const lowStockThreshold = DataStore.settings?.lowStockThreshold || 5;
+        const lowStockInventory = (DataStore.inventory || []).filter(i => 
             (parseFloat(i.stock) || 0) <= lowStockThreshold
         );
         
-        // Also check grocery items if available
-        let lowStockGrocery = [];
-        if (DataStore.grocery && DataStore.grocery.length > 0) {
-            lowStockGrocery = DataStore.grocery.filter(g => 
-                (parseFloat(g.quantity) || 0) <= lowStockThreshold
-            );
-        }
+        const lowStockGrocery = (DataStore.grocery || []).filter(g => 
+            (parseFloat(g.quantity) || 0) <= lowStockThreshold
+        );
         
         const totalLowStock = lowStockInventory.length + lowStockGrocery.length;
         document.getElementById('lowStockCount').textContent = totalLowStock;
@@ -261,11 +285,14 @@ const Dashboard = {
 
     renderPopularItems() {
         const container = document.getElementById('popularItems');
+        if (!container) return;
         
+        // Collect item sales from both active orders and history
         const itemSales = {};
-        [...DataStore.orders, ...DataStore.orderHistory].forEach(order => {
+        [...(DataStore.orders || []), ...(DataStore.orderHistory || [])].forEach(order => {
             (order.items || []).forEach(item => {
-                itemSales[item.name] = (itemSales[item.name] || 0) + item.quantity;
+                const name = item.name || item.item_name || 'Unknown';
+                itemSales[name] = (itemSales[name] || 0) + (parseInt(item.quantity) || 1);
             });
         });
 
@@ -277,14 +304,14 @@ const Dashboard = {
         }
 
         container.innerHTML = sorted.map((item, index) => {
-            const invItem = DataStore.inventory.find(i => i.name === item[0]);
+            const invItem = (DataStore.inventory || []).find(i => i.name === item[0]);
             return `
                 <div class="popular-item">
                     <div class="popular-item-info">
                         <span class="popular-item-rank">${index + 1}</span>
                         <div>
                             <div class="popular-item-name">${item[0]}</div>
-                            <div class="popular-item-category">${invItem?.category || 'N/A'}</div>
+                            <div class="popular-item-category">${invItem?.category || 'Combo/Custom'}</div>
                         </div>
                     </div>
                     <span class="popular-item-sales">${item[1]} sold</span>
@@ -295,9 +322,10 @@ const Dashboard = {
 
     renderUpcomingDeliveries() {
         const container = document.getElementById('upcomingDeliveries');
+        if (!container) return;
         
-        const upcoming = DataStore.orders
-            .filter(o => o.deadline && o.status !== 'delivered')
+        const upcoming = (DataStore.orders || [])
+            .filter(o => o.deadline && o.status !== 'delivered' && o.status !== 'completed')
             .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
             .slice(0, 5);
 
@@ -307,11 +335,11 @@ const Dashboard = {
         }
 
         container.innerHTML = upcoming.map(order => {
-            const daysLeft = Utils.daysUntil(order.deadline);
+            const daysLeft = Utils.daysUntil ? Utils.daysUntil(order.deadline) : 0;
             return `
                 <div class="delivery-item ${daysLeft <= 1 ? 'urgent' : ''}">
                     <div class="delivery-info">
-                        <span class="delivery-customer">${order.customer_name || order.customerName}</span>
+                        <span class="delivery-customer">${order.customer_name || order.customerName || 'Unknown'}</span>
                         <span class="delivery-date">${Utils.formatDate(order.deadline)}</span>
                     </div>
                     <span class="delivery-badge ${daysLeft <= 0 ? 'overdue' : daysLeft <= 1 ? 'today' : ''}">${daysLeft <= 0 ? 'Overdue' : daysLeft === 1 ? 'Tomorrow' : `${daysLeft} days`}</span>
@@ -322,10 +350,12 @@ const Dashboard = {
 
     renderStockAlerts() {
         const container = document.getElementById('stockAlerts');
+        if (!container) return;
         
-        const lowStock = DataStore.inventory
-            .filter(i => i.stock <= DataStore.settings.lowStockThreshold)
-            .sort((a, b) => a.stock - b.stock)
+        const threshold = DataStore.settings?.lowStockThreshold || 5;
+        const lowStock = (DataStore.inventory || [])
+            .filter(i => (parseFloat(i.stock) || 0) <= threshold)
+            .sort((a, b) => (a.stock || 0) - (b.stock || 0))
             .slice(0, 5);
 
         if (lowStock.length === 0) {
@@ -337,7 +367,7 @@ const Dashboard = {
             <div class="stock-alert-item ${item.stock === 0 ? 'out-of-stock' : ''}">
                 <div class="stock-item-info">
                     <span class="stock-item-name">${item.name}</span>
-                    <span class="stock-item-qty">${item.stock} ${item.unit}</span>
+                    <span class="stock-item-qty">${item.stock || 0} ${item.unit || 'units'}</span>
                 </div>
                 <span class="stock-badge ${item.stock === 0 ? 'out' : 'low'}">${item.stock === 0 ? 'Out of Stock' : 'Low Stock'}</span>
             </div>
@@ -346,24 +376,40 @@ const Dashboard = {
 
     renderRecentCustomers() {
         const container = document.getElementById('recentCustomers');
+        if (!container) return;
         
-        const recent = DataStore.customers
-            .sort((a, b) => new Date(b.last_order || b.lastOrder || 0) - new Date(a.last_order || a.lastOrder || 0))
+        // Build customer stats from order history
+        const customerStats = {};
+        (DataStore.orderHistory || []).forEach(order => {
+            const name = order.customer_name || order.customerName || 'Unknown';
+            if (!customerStats[name]) {
+                customerStats[name] = { name, orders: 0, spent: 0, lastOrder: null, phone: order.customer_phone || order.customerPhone };
+            }
+            customerStats[name].orders++;
+            customerStats[name].spent += parseFloat(order.total) || 0;
+            const orderDate = order.delivered_at || order.deliveredAt || order.created_at || order.createdAt;
+            if (!customerStats[name].lastOrder || new Date(orderDate) > new Date(customerStats[name].lastOrder)) {
+                customerStats[name].lastOrder = orderDate;
+            }
+        });
+        
+        const sorted = Object.values(customerStats)
+            .sort((a, b) => new Date(b.lastOrder || 0) - new Date(a.lastOrder || 0))
             .slice(0, 5);
 
-        if (recent.length === 0) {
+        if (sorted.length === 0) {
             container.innerHTML = `<div class="empty-state"><i class="fas fa-users"></i><p>No customers yet</p></div>`;
             return;
         }
 
-        container.innerHTML = recent.map(customer => `
+        container.innerHTML = sorted.map(customer => `
             <div class="recent-customer">
-                <div class="customer-avatar">${Utils.getInitials(customer.name)}</div>
+                <div class="customer-avatar">${Utils.getInitials ? Utils.getInitials(customer.name) : customer.name.charAt(0)}</div>
                 <div class="customer-info">
                     <span class="customer-name">${customer.name}</span>
-                    <span class="customer-orders">${customer.total_orders || customer.totalOrders || 0} orders</span>
+                    <span class="customer-orders">${customer.orders} orders</span>
                 </div>
-                <span class="customer-spent">${Utils.formatCurrency(customer.total_spent || customer.totalSpent || 0)}</span>
+                <span class="customer-spent">${Utils.formatCurrency(customer.spent)}</span>
             </div>
         `).join('');
     },
@@ -371,31 +417,31 @@ const Dashboard = {
     // ===== MODAL BREAKDOWNS =====
     
     showOrdersBreakdown() {
-        const { today, weekStart, monthStart } = this.getDateRanges();
-        const now = new Date();
+        const { today, weekStart, monthStart, now } = this.getDateRanges();
+        const todayCST = this.getTodayCST();
         
         // Calculate orders by period
-        const todayOrders = [...DataStore.orders, ...DataStore.orderHistory].filter(o => {
-            const date = new Date(o.created_at || o.createdAt);
-            return date.toDateString() === today.toDateString();
+        const todayOrders = [...(DataStore.orders || []), ...(DataStore.orderHistory || [])].filter(o => {
+            const date = o.created_at || o.createdAt;
+            return this.toTexasDateString(date) === todayCST;
         });
         
-        const weekOrders = [...DataStore.orders, ...DataStore.orderHistory].filter(o => {
-            const date = new Date(o.created_at || o.createdAt);
-            return date >= weekStart && date <= now;
+        const weekOrders = [...(DataStore.orders || []), ...(DataStore.orderHistory || [])].filter(o => {
+            const date = o.created_at || o.createdAt;
+            return this.isInRange(date, weekStart, now);
         });
         
-        const monthOrders = [...DataStore.orders, ...DataStore.orderHistory].filter(o => {
-            const date = new Date(o.created_at || o.createdAt);
-            return date >= monthStart && date <= now;
+        const monthOrders = [...(DataStore.orders || []), ...(DataStore.orderHistory || [])].filter(o => {
+            const date = o.created_at || o.createdAt;
+            return this.isInRange(date, monthStart, now);
         });
         
-        const totalOrders = DataStore.orders.length + DataStore.orderHistory.length;
+        const totalOrders = (DataStore.orders || []).length + (DataStore.orderHistory || []).length;
         
         const html = `
             <div class="breakdown-modal">
                 <div class="breakdown-header">
-                    <h3><i class="fas fa-shopping-bag"></i> Orders Summary</h3>
+                    <h3><i class="fas fa-shopping-bag"></i> Orders Summary (CST)</h3>
                     <button class="modal-close" onclick="Modal.close('breakdownModal')">&times;</button>
                 </div>
                 <div class="breakdown-body">
@@ -423,7 +469,7 @@ const Dashboard = {
                             <div class="breakdown-list">
                                 ${todayOrders.slice(0, 5).map(o => `
                                     <div class="breakdown-item">
-                                        <span>${o.customer_name || o.customerName}</span>
+                                        <span>${o.customer_name || o.customerName || 'Unknown'}</span>
                                         <span>${Utils.formatCurrency(o.total)}</span>
                                     </div>
                                 `).join('')}
@@ -438,7 +484,7 @@ const Dashboard = {
     },
 
     showPendingOrders() {
-        const pending = DataStore.orders.filter(o => o.status !== 'delivered' && o.status !== 'completed');
+        const pending = (DataStore.orders || []).filter(o => o.status !== 'delivered' && o.status !== 'completed');
         
         const html = `
             <div class="breakdown-modal">
@@ -450,12 +496,12 @@ const Dashboard = {
                     ${pending.length === 0 ? '<p class="no-data">No pending orders! 🎉</p>' : `
                         <div class="breakdown-list full">
                             ${pending.map(o => {
-                                const daysLeft = Utils.daysUntil(o.deadline);
+                                const daysLeft = Utils.daysUntil ? Utils.daysUntil(o.deadline) : 0;
                                 const urgency = daysLeft <= 0 ? 'overdue' : daysLeft <= 1 ? 'urgent' : '';
                                 return `
                                     <div class="breakdown-item ${urgency}">
                                         <div class="order-info">
-                                            <strong>${o.customer_name || o.customerName}</strong>
+                                            <strong>${o.customer_name || o.customerName || 'Unknown'}</strong>
                                             <span class="order-items">${(o.items || []).map(i => i.name).join(', ')}</span>
                                         </div>
                                         <div class="order-meta">
@@ -473,37 +519,89 @@ const Dashboard = {
         
         this.showBreakdownModal(html);
     },
+    
+    showCompletedOrders() {
+        const history = (DataStore.orderHistory || [])
+            .sort((a, b) => new Date(b.delivered_at || b.deliveredAt || b.created_at) - new Date(a.delivered_at || a.deliveredAt || a.created_at));
+        
+        const totalRevenue = history.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+        
+        const html = `
+            <div class="breakdown-modal wide">
+                <div class="breakdown-header" style="background: linear-gradient(135deg, #2E7D32, #43a047);">
+                    <h3><i class="fas fa-check-circle"></i> Completed Orders History (${history.length})</h3>
+                    <button class="modal-close" onclick="Modal.close('breakdownModal')">&times;</button>
+                </div>
+                <div class="breakdown-body">
+                    <div class="breakdown-grid">
+                        <div class="breakdown-card" style="border-bottom: 3px solid #2E7D32;">
+                            <div class="breakdown-value">${history.length}</div>
+                            <div class="breakdown-label">Total Orders</div>
+                        </div>
+                        <div class="breakdown-card" style="border-bottom: 3px solid #43e97b;">
+                            <div class="breakdown-value">${Utils.formatCurrency(totalRevenue)}</div>
+                            <div class="breakdown-label">Total Revenue</div>
+                        </div>
+                        <div class="breakdown-card" style="border-bottom: 3px solid #4facfe;">
+                            <div class="breakdown-value">${Utils.formatCurrency(totalRevenue / (history.length || 1))}</div>
+                            <div class="breakdown-label">Avg Order Value</div>
+                        </div>
+                    </div>
+                    
+                    <h4><i class="fas fa-history"></i> Order History (Never Deleted)</h4>
+                    <div class="breakdown-list full" style="max-height: 400px;">
+                        ${history.length === 0 ? '<p class="no-data">No completed orders yet</p>' : 
+                            history.map(o => `
+                                <div class="breakdown-item">
+                                    <div class="order-info">
+                                        <strong>${o.customer_name || o.customerName || 'Unknown'}</strong>
+                                        <span class="order-items">${(o.items || []).map(i => `${i.name} x${i.quantity}`).join(', ')}</span>
+                                        <small style="color: var(--text-muted);">${Utils.formatDate(o.delivered_at || o.deliveredAt || o.created_at)}</small>
+                                    </div>
+                                    <div class="order-meta">
+                                        <span class="income-amount">+${Utils.formatCurrency(o.total)}</span>
+                                    </div>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.showBreakdownModal(html);
+    },
 
     showIncomeBreakdown() {
         const { today, weekStart, monthStart } = this.getDateRanges();
-        const now = new Date();
         
         const todayIncome = this.getIncome(today);
-        const weekIncome = this.getIncome(weekStart, now);
-        const monthIncome = this.getIncome(monthStart, now);
-        const allTimeIncome = DataStore.orderHistory.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+        const weekIncome = this.getIncome(weekStart);
+        const monthIncome = this.getIncome(monthStart);
+        const allTimeIncome = this.getAllTimeIncome();
         
-        // Get daily breakdown for past 7 days
+        // Get daily breakdown for past 7 days using CST
         const dailyData = [];
         for (let i = 6; i >= 0; i--) {
             const date = new Date(today);
             date.setDate(date.getDate() - i);
+            const dateStr = this.toTexasDateString(date);
             const income = this.getIncome(date);
             dailyData.push({
-                date: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+                date: date.toLocaleDateString('en-US', { timeZone: this.TIMEZONE, weekday: 'short', month: 'short', day: 'numeric' }),
                 amount: income
             });
         }
         
         // Recent delivered orders
-        const recentOrders = DataStore.orderHistory
-            .sort((a, b) => new Date(b.delivered_at || b.deliveredAt) - new Date(a.delivered_at || a.deliveredAt))
+        const recentOrders = (DataStore.orderHistory || [])
+            .sort((a, b) => new Date(b.delivered_at || b.deliveredAt || b.created_at) - new Date(a.delivered_at || a.deliveredAt || a.created_at))
             .slice(0, 10);
         
         const html = `
             <div class="breakdown-modal">
                 <div class="breakdown-header income">
-                    <h3><i class="fas fa-arrow-down"></i> Income Breakdown</h3>
+                    <h3><i class="fas fa-arrow-down"></i> Income Breakdown (CST)</h3>
                     <button class="modal-close" onclick="Modal.close('breakdownModal')">&times;</button>
                 </div>
                 <div class="breakdown-body">
@@ -542,8 +640,8 @@ const Dashboard = {
                             recentOrders.map(o => `
                                 <div class="breakdown-item">
                                     <div>
-                                        <strong>${o.customer_name || o.customerName}</strong>
-                                        <small>${Utils.formatDate(o.delivered_at || o.deliveredAt)}</small>
+                                        <strong>${o.customer_name || o.customerName || 'Customer'}</strong>
+                                        <small>${Utils.formatDate(o.delivered_at || o.deliveredAt || o.created_at)}</small>
                                     </div>
                                     <span class="income-amount">+${Utils.formatCurrency(o.total)}</span>
                                 </div>
@@ -562,43 +660,37 @@ const Dashboard = {
         const now = new Date();
         
         const todayExpenses = this.getExpenses(today);
-        const weekExpenses = this.getExpenses(weekStart, now);
-        const monthExpenses = this.getExpenses(monthStart, now);
+        const weekExpenses = this.getExpenses(weekStart);
+        const monthExpenses = this.getExpenses(monthStart);
+        const allTimeExpenses = this.getAllTimeExpenses();
         
-        const allTimeTransExpense = DataStore.transactions
-            .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-        const allTimeGroceryExpense = (DataStore.grocery || [])
-            .reduce((sum, g) => sum + (parseFloat(g.cost) || 0), 0);
-        const allTimeExpenses = allTimeTransExpense + allTimeGroceryExpense;
-        
-        // Get daily breakdown for past 7 days
+        // Get daily breakdown for past 7 days using CST
         const dailyData = [];
         for (let i = 6; i >= 0; i--) {
             const date = new Date(today);
             date.setDate(date.getDate() - i);
             const expense = this.getExpenses(date);
             dailyData.push({
-                date: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+                date: date.toLocaleDateString('en-US', { timeZone: this.TIMEZONE, weekday: 'short', month: 'short', day: 'numeric' }),
                 amount: expense
             });
         }
         
         // Recent expenses from transactions
-        const recentExpenses = DataStore.transactions
+        const recentExpenses = (DataStore.transactions || [])
             .filter(t => t.type === 'expense')
             .sort((a, b) => new Date(b.date || b.created_at) - new Date(a.date || a.created_at))
             .slice(0, 5);
         
         // Recent grocery purchases
         const recentGrocery = (DataStore.grocery || [])
-            .sort((a, b) => new Date(b.purchase_date || b.purchaseDate) - new Date(a.purchase_date || a.purchaseDate))
+            .sort((a, b) => new Date(b.purchase_date || b.purchaseDate || b.created_at) - new Date(a.purchase_date || a.purchaseDate || a.created_at))
             .slice(0, 5);
         
         const html = `
             <div class="breakdown-modal">
                 <div class="breakdown-header expense">
-                    <h3><i class="fas fa-arrow-up"></i> Expenses Breakdown</h3>
+                    <h3><i class="fas fa-arrow-up"></i> Expenses Breakdown (CST)</h3>
                     <button class="modal-close" onclick="Modal.close('breakdownModal')">&times;</button>
                 </div>
                 <div class="breakdown-body">
@@ -674,30 +766,27 @@ const Dashboard = {
 
     showProfitBreakdown() {
         const { today, weekStart, monthStart } = this.getDateRanges();
-        const now = new Date();
         
         const todayIncome = this.getIncome(today);
         const todayExpenses = this.getExpenses(today);
         const todayProfit = todayIncome - todayExpenses;
         
-        const weekIncome = this.getIncome(weekStart, now);
-        const weekExpenses = this.getExpenses(weekStart, now);
+        const weekIncome = this.getIncome(weekStart);
+        const weekExpenses = this.getExpenses(weekStart);
         const weekProfit = weekIncome - weekExpenses;
         
-        const monthIncome = this.getIncome(monthStart, now);
-        const monthExpenses = this.getExpenses(monthStart, now);
+        const monthIncome = this.getIncome(monthStart);
+        const monthExpenses = this.getExpenses(monthStart);
         const monthProfit = monthIncome - monthExpenses;
         
-        const allTimeIncome = DataStore.orderHistory.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
-        const allTimeTransExpense = DataStore.transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
-        const allTimeGroceryExpense = (DataStore.grocery || []).reduce((sum, g) => sum + (parseFloat(g.cost) || 0), 0);
-        const allTimeExpenses = allTimeTransExpense + allTimeGroceryExpense;
+        const allTimeIncome = this.getAllTimeIncome();
+        const allTimeExpenses = this.getAllTimeExpenses();
         const allTimeProfit = allTimeIncome - allTimeExpenses;
         
         // Profit margin calculation
         const profitMargin = allTimeIncome > 0 ? ((allTimeProfit / allTimeIncome) * 100).toFixed(1) : 0;
         
-        // Daily profit for last 7 days
+        // Daily profit for last 7 days using CST
         const dailyData = [];
         for (let i = 6; i >= 0; i--) {
             const date = new Date(today);
@@ -705,7 +794,7 @@ const Dashboard = {
             const income = this.getIncome(date);
             const expense = this.getExpenses(date);
             dailyData.push({
-                date: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+                date: date.toLocaleDateString('en-US', { timeZone: this.TIMEZONE, weekday: 'short', month: 'short', day: 'numeric' }),
                 income,
                 expense,
                 profit: income - expense
@@ -715,7 +804,7 @@ const Dashboard = {
         const html = `
             <div class="breakdown-modal wide">
                 <div class="breakdown-header profit">
-                    <h3><i class="fas fa-chart-line"></i> Profit & Loss Summary</h3>
+                    <h3><i class="fas fa-chart-line"></i> Profit & Loss Summary (CST)</h3>
                     <button class="modal-close" onclick="Modal.close('breakdownModal')">&times;</button>
                 </div>
                 <div class="breakdown-body">
@@ -792,15 +881,15 @@ const Dashboard = {
     },
 
     showLowStock() {
-        const lowStockThreshold = DataStore.settings.lowStockThreshold || 5;
+        const lowStockThreshold = (DataStore.settings || {}).lowStockThreshold || 5;
         
-        const lowInventory = DataStore.inventory
+        const lowInventory = (DataStore.inventory || [])
             .filter(i => (parseFloat(i.stock) || 0) <= lowStockThreshold)
-            .sort((a, b) => a.stock - b.stock);
+            .sort((a, b) => (a.stock || 0) - (b.stock || 0));
         
         const lowGrocery = (DataStore.grocery || [])
             .filter(g => (parseFloat(g.quantity) || 0) <= lowStockThreshold)
-            .sort((a, b) => a.quantity - b.quantity);
+            .sort((a, b) => (a.quantity || 0) - (b.quantity || 0));
         
         const html = `
             <div class="breakdown-modal">
