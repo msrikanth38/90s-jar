@@ -105,46 +105,80 @@
             </div>
 
             <div class="stats-grid">
-                <div class="stat-card orders">
+                <div class="stat-card orders clickable" onclick="Dashboard.showOrdersBreakdown()">
                     <div class="stat-icon"><i class="fas fa-shopping-bag"></i></div>
                     <div class="stat-info">
                         <span class="stat-value" id="todayOrders">0</span>
                         <span class="stat-label">Today's Orders</span>
+                        <span class="stat-hint">Click for details</span>
                     </div>
                 </div>
-                <div class="stat-card pending">
+                <div class="stat-card pending clickable" onclick="Dashboard.showPendingOrders()">
                     <div class="stat-icon"><i class="fas fa-clock"></i></div>
                     <div class="stat-info">
                         <span class="stat-value" id="pendingOrders">0</span>
                         <span class="stat-label">Pending</span>
+                        <span class="stat-hint">Click to view</span>
                     </div>
                 </div>
-                <div class="stat-card revenue">
+                <div class="stat-card revenue clickable" onclick="Dashboard.showIncomeBreakdown()">
                     <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
                     <div class="stat-info">
                         <span class="stat-value" id="todayRevenue">$0.00</span>
                         <span class="stat-label">Today's Income</span>
+                        <span class="stat-hint">Daily / Weekly / Monthly</span>
                     </div>
                 </div>
-                <div class="stat-card expense">
+                <div class="stat-card expense clickable" onclick="Dashboard.showExpensesBreakdown()">
                     <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
                     <div class="stat-info">
                         <span class="stat-value" id="todayExpenses">$0.00</span>
                         <span class="stat-label">Today's Expenses</span>
+                        <span class="stat-hint">Daily / Weekly / Monthly</span>
                     </div>
                 </div>
-                <div class="stat-card profit">
+                <div class="stat-card profit clickable" onclick="Dashboard.showProfitBreakdown()">
                     <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
                     <div class="stat-info">
                         <span class="stat-value" id="todayProfit">$0.00</span>
                         <span class="stat-label">Today's Profit</span>
+                        <span class="stat-hint">Full Summary</span>
                     </div>
                 </div>
-                <div class="stat-card stock">
+                <div class="stat-card stock clickable" onclick="Dashboard.showLowStock()">
                     <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
                     <div class="stat-info">
                         <span class="stat-value" id="lowStockCount">0</span>
                         <span class="stat-label">Low Stock</span>
+                        <span class="stat-hint">Click to view items</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Summary Row -->
+            <div class="quick-summary-row">
+                <div class="summary-card weekly">
+                    <div class="summary-label">This Week</div>
+                    <div class="summary-stats">
+                        <span class="summary-income"><i class="fas fa-arrow-down"></i> <span id="weeklyIncome">$0</span></span>
+                        <span class="summary-expense"><i class="fas fa-arrow-up"></i> <span id="weeklyExpense">$0</span></span>
+                        <span class="summary-profit"><i class="fas fa-chart-line"></i> <span id="weeklyProfit">$0</span></span>
+                    </div>
+                </div>
+                <div class="summary-card monthly">
+                    <div class="summary-label">This Month</div>
+                    <div class="summary-stats">
+                        <span class="summary-income"><i class="fas fa-arrow-down"></i> <span id="monthlyIncome">$0</span></span>
+                        <span class="summary-expense"><i class="fas fa-arrow-up"></i> <span id="monthlyExpense">$0</span></span>
+                        <span class="summary-profit"><i class="fas fa-chart-line"></i> <span id="monthlyProfit">$0</span></span>
+                    </div>
+                </div>
+                <div class="summary-card alltime">
+                    <div class="summary-label">All Time</div>
+                    <div class="summary-stats">
+                        <span class="summary-income"><i class="fas fa-arrow-down"></i> <span id="allTimeIncome">$0</span></span>
+                        <span class="summary-expense"><i class="fas fa-arrow-up"></i> <span id="allTimeExpense">$0</span></span>
+                        <span class="summary-profit"><i class="fas fa-chart-line"></i> <span id="allTimeProfit">$0</span></span>
                     </div>
                 </div>
             </div>
